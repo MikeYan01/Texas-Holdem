@@ -5,7 +5,6 @@
 // about an opponent in Hold'em lives in the sequence of what they did, and if
 // five Bots act in one frame you see none of it.
 
-import { formatCard } from '../../poker-math/cards.ts';
 import type { Card } from '../../poker-math/cards.ts';
 import type { GameEvent } from '../../engine/types.ts';
 import { describeHand } from './hand-description.ts';
@@ -106,6 +105,3 @@ export function describeEvent(event: GameEvent, nameOf: SeatNamer): Omit<LogLine
       return null;
   }
 }
-
-/** The card text used on the felt, e.g. `A♠`. Exported for the card component. */
-export const formatCardForEngine = formatCard;

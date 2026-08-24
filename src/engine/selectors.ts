@@ -27,9 +27,6 @@ export function visibleHoleCards(
   return null;
 }
 
-export const totalPotSize = (state: SessionState): number =>
-  state.pots.reduce((sum, pot) => sum + pot.amount, 0);
-
 /**
  * The pots as a table shows them: only chips already gathered into the middle,
  * with the current Street's betting still sitting in front of the Seats who bet
@@ -69,10 +66,6 @@ export const chipsInPlay = (state: SessionState): number =>
 
 export const isPlayerToAct = (state: SessionState): boolean =>
   state.phase === 'awaiting-action' && state.actorSeat === state.playerSeat;
-
-/** Seats still contesting the Hand. */
-export const liveSeatIndices = (state: SessionState): number[] =>
-  state.seats.filter((seat) => !seat.folded).map((seat) => seat.index);
 
 /** How many opponents the Player is still up against — the basis for Equity. */
 export const opponentsRemaining = (state: SessionState): number =>

@@ -38,3 +38,9 @@ Bot 不应该直接使用**真实** Equity:对随机手牌的完美 Equity 会�
 同时补一条本 ADR 没有说清的边界:**多人河牌不做精确枚举**。
 n 个对手的联合样本空间是 990^n,两人以上就不可行,因此回退到蒙特卡洛,
 并在返回值的 `method` 字段里如实标注为 `monte-carlo` 而不是 `exact-enumeration`。
+
+## Note (v1 实现后)
+
+上文提到的 `.scratch/poker-eval-reference/eq2.js` 已经删除。那套「每次迭代零分配」的写法现在就活在
+`src/poker-math/equity-core.ts` 的 `monteCarloEquity` 里,并且有注释说明为什么必须这么写。
+浏览器实测(Chromium)比 Node 更快:五个 Bot 各算一次合计 6.6 ms,仍在一帧之内。

@@ -14,7 +14,10 @@
     "typecheck": "tsc --noEmit",
     "check:boundary": "node scripts/check-engine-boundary.mjs",
     "check:all": "npm run typecheck && npm run check:boundary && npm test",
-    "gen:preflop": "node scripts/generate-preflop-table.ts"
+    "gen:tables": "npm run gen:preflop-equity && npm run gen:preflop-odds",
+    "gen:preflop-equity": "node scripts/generate-preflop-table.ts",
+    "gen:preflop-odds": "node scripts/generate-preflop-hand-odds.ts",
+    "measure:bots": "node scripts/measure-bot-balance.ts"
   },
   "devDependencies": {
     "@types/react": "^19.2.2",

@@ -60,9 +60,6 @@ export type SeatState = {
 /** Net win/loss across the whole Session. May be negative. Sums to zero. */
 export const scoreOf = (seat: SeatState): number => seat.stack - seat.boughtIn;
 
-/** In the Hand, out of chips, and therefore done acting. */
-export const isAllIn = (seat: SeatState): boolean => !seat.folded && seat.stack === 0;
-
 /** Still in the Hand and still able to act. */
 export const canStillAct = (seat: SeatState): boolean => !seat.folded && seat.stack > 0;
 

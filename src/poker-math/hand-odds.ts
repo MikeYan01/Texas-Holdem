@@ -21,7 +21,7 @@ import { HandCategory, categoryOf, evaluateHand } from './evaluate-hand.ts';
 import { PREFLOP_HAND_ODDS } from './preflop-hand-odds.ts';
 import { canonicalHandLabel } from './starting-hands.ts';
 
-export const HAND_CATEGORY_COUNT = 9;
+const HAND_CATEGORY_COUNT = 9;
 
 export type HandOddsMethod = 'preflop-table' | 'exact-enumeration';
 

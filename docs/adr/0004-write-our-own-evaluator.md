@@ -21,3 +21,14 @@
 求值器必须返回**单个可比较的整数**(相等即平分底池)。返回"类别 + 单独的踢脚数组"会迫使每个调用点自己写比较逻辑,而分池 bug 正是在那里滋生的。
 
 已知实现陷阱,全部已对 `phe` 验证过,必须有对应测试:同花且有顺子 **不等于** 同花顺(必须在同花的那门花色内部找顺子);A-2-3-4-5 轮子需要特判;A 不能回绕(Q K A 2 3 不是顺子);两组三条构成葫芦;七张牌可以有三个对子,而两对的踢脚可能正是第三对的点数;四条的踢脚可能来自一个对子;六张或七张同花要取最大的五张。
+
+## Note (v1 实现后)
+
+上文提到的 `.scratch/poker-eval-reference/` 已经删除。那四个调查脚本存在的意义是让这条决定的数字可以被复现,而现在**仓库里有更好的证据,而且它每次 CI 都在跑**:
+
+- `src/poker-math/evaluate-hand.exhaustive.slow.test.ts` —— 穷举全部 133,784,560 手牌,九个牌型频次与公开值完全一致(约 28 秒)。
+- `src/poker-math/evaluate-hand.differential.test.ts` —— 与 `phe` 做 60 万次排序与平局差分,零分歧。
+- `src/poker-math/evaluate-hand.properties.test.ts` —— 6 万手随机牌验证 `bestFive` 与 `tiebreakersOf`,这两个是穷举与差分都覆盖不到的。
+- `src/poker-math/evaluate-hand.perf.test.ts` —— 只防数量级退化的吞吐基线。
+
+一次性脚本被真正的测试取代,是这条决定应有的结局。

@@ -33,11 +33,6 @@ export function enumerateLegalActions(legal: LegalActions): PlayerAction[] {
   return actions;
 }
 
-export function randomLegalAction(legal: LegalActions, rng: Rng): PlayerAction {
-  const choices = enumerateLegalActions(legal);
-  return choices[Math.floor(rng() * choices.length)] ?? { type: 'fold' };
-}
-
 /**
  * A weighted pick that folds far less often than uniform choice would. Uniform
  * play folds most Hands before the flop, which would leave the later Streets —
