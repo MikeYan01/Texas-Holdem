@@ -121,8 +121,8 @@ describe('the personalities differ in the right direction', () => {
     expect(tendencies('Rock').entryRate).toBeLessThan(tendencies('CallingStation').entryRate);
   });
 
-  it('has the Maniac raising more than the TAG', () => {
-    expect(tendencies('Maniac').raiseRate).toBeGreaterThan(tendencies('TAG').raiseRate);
+  it('has the Bluffer raising more than the TAG', () => {
+    expect(tendencies('Bluffer').raiseRate).toBeGreaterThan(tendencies('TAG').raiseRate);
   });
 
   it('has the LAG entering more pots than the TAG', () => {
@@ -156,7 +156,7 @@ describe('bet sizing', () => {
   it('stays inside what the engine allows', () => {
     const view = viewFacing({ potTotal: 60, callAmount: 10 });
     for (let seed = 0; seed < 200; seed++) {
-      const action = decideWithEquity(view, PERSONALITIES.Maniac, 0.9, seededRng(seed));
+      const action = decideWithEquity(view, PERSONALITIES.Bluffer, 0.9, seededRng(seed));
       if (action.type === 'bet' || action.type === 'raise') {
         expect(action.to).toBeGreaterThanOrEqual(view.legalActions.minRaiseTo);
         expect(action.to).toBeLessThanOrEqual(view.legalActions.maxRaiseTo);
@@ -225,7 +225,7 @@ describe('the big blind’s option', () => {
   it('raises with a word the engine accepts', () => {
     const view = bigBlindOption();
     const raises = Array.from({ length: 200 }, (_, seed) =>
-      decideWithEquity(view, PERSONALITIES.Maniac, 0.9, seededRng(seed)),
+      decideWithEquity(view, PERSONALITIES.Bluffer, 0.9, seededRng(seed)),
     ).filter((action) => action.type !== 'check');
 
     expect(raises.length).toBeGreaterThan(0);

@@ -9,7 +9,7 @@ import type { Card } from '../poker-math/cards.ts';
 import type { Rng } from '../poker-math/rng.ts';
 import type { LegalActions, Street } from '../engine/types.ts';
 
-export type PersonalityKey = 'TAG' | 'LAG' | 'CallingStation' | 'Rock' | 'Maniac';
+export type PersonalityKey = 'TAG' | 'LAG' | 'CallingStation' | 'Rock' | 'Bluffer';
 
 /**
  * The five Bots run the same logic; a personality is nothing but a handful of
@@ -38,7 +38,11 @@ export type Personality = {
    * also makes the sampling error of 2000 iterations harmless.
    */
   readonly equityNoise: number;
-  /** How often it fires with nothing, which is what makes bluffs believable. */
+  /**
+    * How often it fires with nothing, heads-up. Scaled down by the number of
+    * opponents at the point of use: a bluff needs everyone to fold, so betting
+    * into five players as often as into one is not a style, it is a donation.
+    */
   readonly bluffFrequency: number;
   /** Bet size as a fraction of the pot. A range, so sizing is not one number. */
   readonly betSizing: { readonly min: number; readonly max: number };

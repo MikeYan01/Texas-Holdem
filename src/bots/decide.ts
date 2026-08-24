@@ -94,7 +94,10 @@ export function decideWithEquity(
   const raiseThreshold = evenShare + personality.raiseMargin;
 
   const wantsToRaise = equity >= raiseThreshold;
-  const bluffing = rng() < personality.bluffFrequency;
+  // A bluff only pays when everybody folds, so its value falls away as the
+  // table grows. Firing into five opponents as often as into one is the
+  // difference between an aggressive style and a losing one.
+  const bluffing = rng() < personality.bluffFrequency / view.opponentCount;
   // "Bet" and "raise" are the same decision to a Bot; which word the engine wants
   // depends only on whether anything has been bet yet. Checking `canBet` alone
   // would silently skip the one spot where checking and raising are both legal —

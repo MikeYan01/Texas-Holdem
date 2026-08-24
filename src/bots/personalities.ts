@@ -49,16 +49,22 @@ export const PERSONALITIES: Record<PersonalityKey, Personality> = {
     bluffFrequency: 0.02,
     betSizing: { min: 0.4, max: 0.65 },
   },
-  // LAG taken to its limit. Its job is to generate noise: without something at
-  // the table that might have anything, "is this a bluff?" never gets asked.
-  Maniac: {
-    key: 'Maniac',
-    preflopCallMargin: -0.06,
-    postflopCallMargin: -0.08,
-    raiseMargin: -0.03,
-    equityNoise: 0.17,
-    bluffFrequency: 0.46,
-    betSizing: { min: 0.6, max: 1.4 },
+  // Bets and raises far more than its cards justify, but does not pay off when
+  // it misses. Its job is the one the table would otherwise lack: without
+  // somebody who might have anything, "is this a bluff?" never gets asked.
+  //
+  // Note what it does NOT do — call below the price. An earlier version of this
+  // seat demanded 4% equity where the pot odds were 20%, so every call it ever
+  // made lost money by construction, and it shipped 5 BB a hand to everyone
+  // else. Aggression is a style; calling at a loss is just a leak.
+  Bluffer: {
+    key: 'Bluffer',
+    preflopCallMargin: 0.12,
+    postflopCallMargin: 0.06,
+    raiseMargin: 0.01,
+    equityNoise: 0.11,
+    bluffFrequency: 0.3,
+    betSizing: { min: 0.55, max: 1.2 },
   },
 };
 
@@ -68,5 +74,5 @@ export const PERSONALITY_KEYS: readonly PersonalityKey[] = [
   'LAG',
   'CallingStation',
   'Rock',
-  'Maniac',
+  'Bluffer',
 ];

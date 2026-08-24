@@ -1,7 +1,7 @@
 import type { Card } from '../../poker-math/cards.ts';
 import { displayPots, potForOdds, visibleHoleCards } from '../../engine/selectors.ts';
 import type { GameController } from '../useGameSession.ts';
-import { PERSONALITY_BLURBS, potName } from '../text/labels.ts';
+import { potName } from '../text/labels.ts';
 import { PlayingCard } from './PlayingCard.tsx';
 import { SeatBadge } from './SeatBadge.tsx';
 
@@ -18,7 +18,7 @@ function seatPosition(visualIndex: number, seatCount: number): React.CSSProperti
 }
 
 export function PokerTable({ controller }: { controller: GameController }) {
-  const { session, animations, nameOf, seating } = controller;
+  const { session, animations, nameOf } = controller;
   const { seats, board, playerSeat, buttonSeat, actorSeat } = session;
   const pots = displayPots(session);
   const middle = potForOdds(session);
@@ -66,13 +66,11 @@ export function PokerTable({ controller }: { controller: GameController }) {
 
       {seats.map((seat) => {
         const visualIndex = (seat.index - playerSeat + seats.length) % seats.length;
-        const key = seating.get(seat.index);
         return (
           <SeatBadge
             key={seat.index}
             seat={seat}
             name={nameOf(seat.index)}
-            blurb={key ? PERSONALITY_BLURBS[key] : '本人'}
             holeCards={visibleHoleCards(session, seat.index)}
             isButton={seat.index === buttonSeat}
             isActive={session.phase === 'awaiting-action' && seat.index === actorSeat}

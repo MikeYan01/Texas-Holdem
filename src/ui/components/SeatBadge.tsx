@@ -6,7 +6,6 @@ import { PlayingCard } from './PlayingCard.tsx';
 export type SeatBadgeProps = {
   readonly seat: SeatState;
   readonly name: string;
-  readonly blurb: string | null;
   readonly holeCards: readonly [Card, Card] | null;
   readonly isButton: boolean;
   readonly isActive: boolean;
@@ -23,7 +22,6 @@ const chips = (n: number) => n.toLocaleString('zh-CN');
 export function SeatBadge({
   seat,
   name,
-  blurb,
   holeCards,
   isButton,
   isActive,
@@ -67,10 +65,7 @@ export function SeatBadge({
           <span className="seat__avatar" aria-hidden="true">
             {isPlayer ? '★' : name.slice(0, 1)}
           </span>
-          <span className="seat__who">
-            <span className="seat__name">{name}</span>
-            {blurb && <span className="seat__blurb">{blurb}</span>}
-          </span>
+          <span className="seat__name">{name}</span>
           {isButton && (
             <span className="seat__button" title="Button">
               D

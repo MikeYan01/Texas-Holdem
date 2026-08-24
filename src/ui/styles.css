@@ -514,28 +514,17 @@ button:disabled {
   border-color: #4c6a5d;
 }
 
-.seat__who {
-  display: flex;
-  flex-direction: column;
-  min-width: 0;
-  text-align: left;
-}
 
 .seat__name {
   font-weight: 700;
-  font-size: 13px;
+  font-size: 14px;
   line-height: 1.25;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  letter-spacing: 0.01em;
 }
 
-.seat__blurb {
-  font-size: 10px;
-  color: var(--ink-faint);
-  line-height: 1.3;
-  white-space: nowrap;
-}
 
 .seat__button {
   margin-left: auto;

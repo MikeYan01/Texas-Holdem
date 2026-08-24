@@ -20,7 +20,7 @@ import { assignPersonalities, makeBotView } from '../bots/view.ts';
 import type { EquityProvider, PersonalityKey } from '../bots/types.ts';
 import { equityProvider } from './equity.ts';
 import { describeEvent, type LogLine } from './text/events.ts';
-import { PERSONALITY_NAMES } from './text/labels.ts';
+import { PLAYER_NAME, assignBotNames } from './bot-names.ts';
 
 /** How long each automatic step waits, in milliseconds. */
 export const PACING = {
@@ -52,6 +52,9 @@ type Game = {
   readonly log: readonly LogLine[];
   readonly animations: readonly ChipAnimation[];
   readonly seating: ReadonlyMap<number, PersonalityKey>;
+  /** Display names, drawn separately from personalities so neither gives the
+      other away. */
+  readonly names: ReadonlyMap<number, string>;
   readonly counter: number;
 };
 
@@ -63,6 +66,7 @@ function newGame(seed: number): Game {
     log: [],
     animations: [],
     seating: assignPersonalities(session.config.seatCount, session.playerSeat, seededRng(seed ^ 0x5f3759df)),
+    names: assignBotNames(session.config.seatCount, session.playerSeat, seededRng(seed ^ 0x27d4eb2f)),
     counter: 0,
   };
 }
@@ -90,7 +94,7 @@ function animationsFor(events: readonly GameEvent[], from: number): ChipAnimatio
  */
 function step(game: Game, action: PlayerAction | { type: 'advance' }): Game {
   const session = reduce(game.session, action);
-  const nameOf = (seat: number) => seatName(seat, session.playerSeat, game.seating);
+  const nameOf = (seat: number) => seatName(seat, session.playerSeat, game.names);
 
   const lines: LogLine[] = [];
   let counter = game.counter;
@@ -116,11 +120,10 @@ function step(game: Game, action: PlayerAction | { type: 'advance' }): Game {
 export function seatName(
   seat: number,
   playerSeat: number,
-  seating: ReadonlyMap<number, PersonalityKey>,
+  names: ReadonlyMap<number, string>,
 ): string {
-  if (seat === playerSeat) return '你';
-  const key = seating.get(seat);
-  return key ? PERSONALITY_NAMES[key] : `${seat + 1} 号位`;
+  if (seat === playerSeat) return PLAYER_NAME;
+  return names.get(seat) ?? `${seat + 1} 号位`;
 }
 
 export type EquityReadout = {
@@ -252,8 +255,8 @@ export function useGameSession(options?: {
   }, [enabled, session, equity]);
 
   const nameOf = useCallback(
-    (seat: number) => seatName(seat, session.playerSeat, game.seating),
-    [session.playerSeat, game.seating],
+    (seat: number) => seatName(seat, session.playerSeat, game.names),
+    [session.playerSeat, game.names],
   );
 
   const restart = useCallback(() => {
