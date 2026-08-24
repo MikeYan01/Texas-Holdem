@@ -1,0 +1,26 @@
+# 09: Session
+
+**What to build:** 把一手一手的 Hand 变成一"局"。打满五个 Orbit(三十手 Hand)之后进入结算屏,六个 Seat 按 Score 排名。中途有人输光了 Stack 就自动 Rebuy 继续打——**没有人会被淘汰离桌**,所以你不会在第八手破产然后干坐着看完剩下二十二手。
+
+这一票兑现 ADR-0002 的那条不变量:任意时刻六个 Score 之和恒为零。它是本项目最重要的一条性质,也是这一票的主验证手段。
+
+对手用脚本化策略即可完整验证,不依赖第 07、08 票。
+
+**Blocked by:** 05
+
+**Status:** ready-for-agent
+
+- [ ] 一个 Session 固定为五个 Orbit,即三十手 Hand
+- [ ] state 中可读出当前 Hand 序号与 Orbit 序号
+- [ ] **Stack 与 Score 是两个独立的量**:Stack 是当前 Hand 面前的有限筹码,Score 是整个 Session 的累计净胜负、可以为负
+- [ ] 任何 Seat 的 Stack 归零时自动 Rebuy 回起始 Stack 200,同时该 Seat 的 Score 等额减少
+- [ ] Rebuy 不设次数上限,任何 Seat 都不会离桌
+- [ ] Session 在第三十手 Hand 结算完毕后终止,**不因任何 Seat 破产而提前结束**
+- [ ] 结算屏显示六个 Seat 按 Score 从高到低排名
+- [ ] 界面把 Score 与 Stack 清楚地区分开显示
+- [ ] **属性测试(本票主验证)**:注入种子化 RNG 与随机合法行动,跑十万手 Hand,每手结束断言:
+  - [ ] 六个 Seat 的 Score 之和恒为 0
+  - [ ] 所有 Stack 非负
+  - [ ] 筹码总额守恒
+- [ ] 该属性测试在 Node 下运行,不需要浏览器
+- [ ] 任一断言失败时,失败的种子可被记录并原样复现
