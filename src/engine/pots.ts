@@ -111,6 +111,7 @@ export function excessOverLiveCommitment(
 export type PotAward = {
   readonly potIndex: number;
   readonly amount: number;
+  readonly eligibleSeats: readonly number[];
   readonly winners: readonly PotWinner[];
   readonly oddChipSeat: number | null;
 };
@@ -153,10 +154,13 @@ export function awardPots(
     // chips back.
     if (contenders.length <= 1 || contenders.some((seat) => !strength.has(seat))) {
       const winner = contenders[0];
-      if (winner === undefined) return { potIndex, amount: pot.amount, winners: [], oddChipSeat: null };
+      if (winner === undefined) {
+        return { potIndex, amount: pot.amount, eligibleSeats: contenders, winners: [], oddChipSeat: null };
+      }
       return {
         potIndex,
         amount: pot.amount,
+        eligibleSeats: contenders,
         winners: [{ seat: winner, amount: pot.amount, handValue: null, bestFive: null }],
         oddChipSeat: null,
       };
@@ -173,6 +177,7 @@ export function awardPots(
     return {
       potIndex,
       amount: pot.amount,
+      eligibleSeats: contenders,
       winners: winners.map((seat) => ({
         seat,
         amount: share + (seat === oddChipSeat ? remainder : 0),

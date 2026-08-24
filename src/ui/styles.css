@@ -134,13 +134,6 @@ button:disabled {
   line-height: 1.9;
 }
 
-.screen__foot {
-  margin: 0;
-  max-width: 640px;
-  color: var(--ink-faint);
-  font-size: 13px;
-  line-height: 1.9;
-}
 
 /* ================================================================ buttons == */
 
@@ -1286,6 +1279,16 @@ button:disabled {
 
 .reveal__pot-name {
   color: var(--ink-dim);
+  display: inline-flex;
+  align-items: baseline;
+  gap: 7px;
+}
+
+.reveal__pot-eligible {
+  padding-left: 7px;
+  border-left: 1px solid var(--line-soft);
+  color: var(--ink-faint);
+  font-size: 11px;
 }
 
 .reveal__winner {

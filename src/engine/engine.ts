@@ -388,6 +388,7 @@ function settleHand(draft: Draft): void {
       type: 'pot-awarded',
       potIndex: award.potIndex,
       amount: award.amount,
+      eligibleSeats: award.eligibleSeats,
       winners: award.winners,
       oddChipSeat: award.oddChipSeat,
     });

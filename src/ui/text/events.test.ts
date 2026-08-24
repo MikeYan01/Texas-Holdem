@@ -83,6 +83,7 @@ describe('describeEvent', () => {
         type: 'pot-awarded',
         potIndex: 0,
         amount: 120,
+        eligibleSeats: [1, 2],
         winners: [{ seat: 1, amount: 120, handValue: twoPair, bestFive: null }],
         oddChipSeat: null,
       }),
@@ -95,6 +96,7 @@ describe('describeEvent', () => {
         type: 'pot-awarded',
         potIndex: 1,
         amount: 60,
+        eligibleSeats: [2, 3],
         winners: [{ seat: 2, amount: 60, handValue: null, bestFive: null }],
         oddChipSeat: null,
       }),
@@ -107,6 +109,7 @@ describe('describeEvent', () => {
         type: 'pot-awarded',
         potIndex: 0,
         amount: 51,
+        eligibleSeats: [1, 2],
         winners: [
           { seat: 1, amount: 26, handValue: null, bestFive: null },
           { seat: 2, amount: 25, handValue: null, bestFive: null },

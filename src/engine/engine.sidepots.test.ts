@@ -253,6 +253,32 @@ describe('all-in through the reducer', () => {
     expect(chipsInPlay(state)).toBe(before);
   });
 
+  it('reports who was entitled to each pot, so two winners can be explained', () => {
+    // The exact shape that looks broken on screen: the best hand takes the small
+    // pot and a weaker one takes the big pot. Seat 0 is all-in short with aces
+    // and cannot contest the side pot at all.
+    const state = advance(
+      positionAt({
+        seats: [
+          { stack: 0, hole: 'Ah Ad', committed: 10, streetCommitted: 10, hasActed: true },
+          { stack: 0, hole: 'Kh Kd', committed: 60, streetCommitted: 60, hasActed: true },
+          { stack: 0, hole: '7c 2d', committed: 60, streetCommitted: 60, hasActed: true },
+        ],
+        board: '3h 5s 9c Jd 4s',
+        street: 'river',
+        phase: 'awaiting-showdown',
+        actorSeat: null,
+      }),
+    );
+    const awards = state.events.filter((e) => e.type === 'pot-awarded');
+
+    expect(awards[0]).toMatchObject({ potIndex: 0, amount: 30, eligibleSeats: [0, 1, 2] });
+    expect(awards[0]!.winners.map((w) => w.seat)).toEqual([0]); // aces take the main pot
+
+    expect(awards[1]).toMatchObject({ potIndex: 1, amount: 100, eligibleSeats: [1, 2] });
+    expect(awards[1]!.winners.map((w) => w.seat)).toEqual([1]); // and have no claim here
+  });
+
   it('reports each pot separately so the table can show them', () => {
     const state = advance(
       positionAt({

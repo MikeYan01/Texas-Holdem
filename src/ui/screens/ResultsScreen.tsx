@@ -37,8 +37,6 @@ export function ResultsScreen({
         })}
       </ol>
 
-      <p className="screen__foot">六个净胜负之和恒为 0,所以名次衡量的是真实发生过的转移。</p>
-
       <button type="button" className="btn btn--primary btn--large" onClick={onRestart}>
         再来一局
       </button>

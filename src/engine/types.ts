@@ -224,6 +224,13 @@ export type GameEvent =
       readonly type: 'pot-awarded';
       readonly potIndex: number;
       readonly amount: number;
+      /**
+       * Who was entitled to contest this pot. Carried so the table can explain
+       * the otherwise baffling case of two winners in one Hand: the best hand at
+       * the table can be all-in short, take the main pot, and have no claim on a
+       * side pot it never had the chips to contest.
+       */
+      readonly eligibleSeats: readonly number[];
       readonly winners: readonly PotWinner[];
       /** Who took the indivisible remainder, if there was one. */
       readonly oddChipSeat: number | null;
