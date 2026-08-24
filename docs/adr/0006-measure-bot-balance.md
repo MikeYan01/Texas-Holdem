@@ -1,6 +1,8 @@
 # Bot 的平衡靠实测,不靠调参时的直觉
 
-五个 Bot 的性格参数,任何一次改动都必须用 `scripts/measure-bot-balance.ts` 实测过才算数,并且 `src/bots/balance.slow.test.ts` 会守住一条底线:没有任何性格每手净亏超过 4 chips,全场极差小于 8 chips/hand。
+五个 Bot 的性格参数,任何一次改动都必须用 `npm run measure:bots` 实测过才算数,并且 `src/bots/balance.slow.test.ts` 会守住一条底线:没有任何性格每手净亏超过 4 chips,全场极差小于 8 chips/hand。
+
+实验本身只有一份,在 `src/bots/measure-balance.ts`,调参工具和回归防线共用它。这不是为了少写几行——**测量工具和它守护的断言必须测的是同一件事**,各留一份副本迟早会漂移成两个实验。
 
 这条规则是被一个已经上线的 bug 逼出来的。原来的第五个性格 `Maniac` 阈值低于底池赔率——`postflopCallMargin: -0.08` 意味着底池赔率要求 20% 胜率时它只要 4%,**每一次跟注都是 -EV**。实测 400 局的结果:
 
