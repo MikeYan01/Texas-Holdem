@@ -1,6 +1,6 @@
 # Texas
 
-一个网页德州扑克游戏:一名 Player 对五个 Bot,三十手牌决出 Score 排名,单机运行,没有真钱。
+一个网页德州扑克游戏:一名 Player 对五个 Bot,十二手牌决出 Score 排名,单机运行,没有真钱。
 
 ## Language
 
@@ -55,7 +55,7 @@ Button 绕桌一周所经过的六手牌。它是公平单位——一圈之内�
 _Avoid_: lap, cycle, 轮
 
 **Session(一局)**:
-本游戏的完整一次游玩:五个 Orbit,即三十手 Hand。结束时按 Score 排名。
+本游戏的完整一次游玩:两个 Orbit,即十二手 Hand。结束时按 Score 排名。
 _Avoid_: game, match, tournament, 比赛
 
 **Showdown(摊牌)**:

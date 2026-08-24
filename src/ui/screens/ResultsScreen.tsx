@@ -15,7 +15,7 @@ export function ResultsScreen({
   return (
     <main className="screen screen--results">
       <h1 className="screen__title">本局结束</h1>
-      <p className="screen__lead">三十手打完,按净胜负排名。</p>
+      <p className="screen__lead">{session.config.handsPerSession} 手打完,按净胜负排名。</p>
 
       <ol className="ranking">
         {ranked.map((seat, place) => {

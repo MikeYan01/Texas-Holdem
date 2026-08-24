@@ -4,16 +4,19 @@ import { getEquity } from '../poker-math/equity.ts';
 import { createSession, reduce } from '../engine/engine.ts';
 import { chipsInPlay, scoreSum, visibleHoleCards } from '../engine/selectors.ts';
 import { enumerateLegalActions } from '../engine/random-play.ts';
-import { scoreOf, type SessionState } from '../engine/types.ts';
+import { DEFAULT_CONFIG, scoreOf, type SessionState } from '../engine/types.ts';
 import { decide } from '../bots/decide.ts';
 import { PERSONALITIES } from '../bots/personalities.ts';
 import { assignPersonalities, makeBotView } from '../bots/view.ts';
 import { describeEvent } from './text/events.ts';
 
 // The whole game, with real Bots and real Equity, minus React and minus the
-// clock. Everything the UI adds on top of this is timers and markup: if thirty
-// Hands play out here without an illegal action, a stuck state or a broken
+// clock. Everything the UI adds on top of this is timers and markup: if a whole
+// Session plays out here without an illegal action, a stuck state or a broken
 // invariant, the table is playable.
+
+const HANDS = DEFAULT_CONFIG.handsPerSession;
+const ORBITS = HANDS / DEFAULT_CONFIG.seatCount;
 
 async function playSession(seed: number) {
   const rng = seededRng(seed);
@@ -96,13 +99,13 @@ async function playSession(seed: number) {
 }
 
 describe('a whole Session, played by the real Bots', () => {
-  it('runs thirty Hands to a ranking without getting stuck', async () => {
+  it('runs a whole Session to a ranking without getting stuck', async () => {
     const { state, stats } = await playSession(20_260_824);
 
     expect(state.phase).toBe('session-complete');
-    expect(stats.hands).toBe(30);
-    expect(state.handNumber).toBe(30);
-    expect(state.orbit).toBe(5);
+    expect(stats.hands).toBe(HANDS);
+    expect(state.handNumber).toBe(HANDS);
+    expect(state.orbit).toBe(ORBITS);
     expect(stats.decisions).toBeGreaterThan(100);
     expect(stats.lines).toBeGreaterThan(200);
     expect(stats.playerEquityReadings).toBeGreaterThan(20);

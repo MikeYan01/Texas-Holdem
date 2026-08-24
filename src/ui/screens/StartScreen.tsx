@@ -1,3 +1,5 @@
+import { DEFAULT_CONFIG } from '../../engine/types.ts';
+
 /**
  * One button, no configuration.
  *
@@ -11,10 +13,14 @@
  * bluffing is most of what there is to learn at this table.
  */
 export function StartScreen({ onStart }: { onStart: () => void }) {
+  const { seatCount, handsPerSession } = DEFAULT_CONFIG;
   return (
     <main className="screen screen--start">
       <h1 className="screen__title">德州扑克</h1>
-      <p className="screen__lead">六人桌,你对五个 Bot。打满五圈共三十手,按净胜负排名。</p>
+      <p className="screen__lead">
+        {seatCount} 人桌,你对 {seatCount - 1} 个 Bot。打满 {handsPerSession / seatCount} 圈共{' '}
+        {handsPerSession} 手,按净胜负排名。
+      </p>
 
       <button type="button" className="btn btn--primary btn--large" onClick={onStart}>
         开始新局

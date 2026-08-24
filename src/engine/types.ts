@@ -116,7 +116,9 @@ export const DEFAULT_CONFIG: SessionConfig = {
   startingStack: 200,
   smallBlind: 1,
   bigBlind: 2,
-  handsPerSession: 30,
+  // Two Orbits. Long enough that position comes round and the Bots show their
+  // habits, short enough to finish in one sitting.
+  handsPerSession: 12,
 };
 
 /**

@@ -24,3 +24,13 @@
   - [x] 筹码总额守恒
 - [x] 该属性测试在 Node 下运行,不需要浏览器
 - [x] 任一断言失败时,失败的种子可被记录并原样复现
+
+## Comments
+
+**Session 长度从三十手(五个 Orbit)改为十二手(两个 Orbit)** —— 用户试玩后的决定:三十手一口气打太长。
+
+spec、CONTEXT.md 与本票原文都写的是「五个 Orbit,即三十手」,已一并更新。**这条改动没有触碰任何规则**:仍然是整数个 Orbit,所以「一圈之内每个 Seat 各当过一次 Button、小盲、大盲」这条公平性仍然成立;Rebuy、零和、结算全部不变。
+
+长度只存在于一个地方——`DEFAULT_CONFIG.handsPerSession`。开始屏、结算屏、顶栏计数与相关测试现在全部**从 config 推导**,不再各自写死数字,所以下次要改回三十手只改一个常量。
+
+`handsPerSession % seatCount === 0` 现在是一条显式断言(engine.session.test.ts),防止有人把它设成不能整除 Orbit 的数。

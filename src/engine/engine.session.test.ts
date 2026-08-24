@@ -4,7 +4,11 @@ import { createSession, reduce } from './engine.ts';
 import { weightedLegalAction } from './random-play.ts';
 import { chipsInPlay, rankingByScore, scoreSum } from './selectors.ts';
 import { positionAt } from './test-fixtures.ts';
-import { IllegalActionError, scoreOf, type SessionState } from './types.ts';
+import { DEFAULT_CONFIG, IllegalActionError, scoreOf, type SessionState } from './types.ts';
+
+const HANDS = DEFAULT_CONFIG.handsPerSession;
+const SEATS = DEFAULT_CONFIG.seatCount;
+const ORBITS = HANDS / SEATS;
 
 const advance = (state: SessionState) => reduce(state, { type: 'advance' });
 
@@ -23,12 +27,17 @@ function playSession(seed: number, onHandEnd?: (state: SessionState) => void): S
   throw new Error(`session ${seed} never finished`);
 }
 
-describe('a Session is five Orbits', () => {
-  it('plays exactly thirty Hands and then stops', () => {
+describe('a Session is a whole number of Orbits', () => {
+  it('divides evenly into Orbits, so every Seat gets the Button equally often', () => {
+    expect(HANDS % SEATS).toBe(0);
+    expect(ORBITS).toBeGreaterThan(1);
+  });
+
+  it('plays exactly the configured number of Hands and then stops', () => {
     let hands = 0;
     const final = playSession(101, () => hands++);
-    expect(hands).toBe(30);
-    expect(final.handNumber).toBe(30);
+    expect(hands).toBe(HANDS);
+    expect(final.handNumber).toBe(HANDS);
     expect(final.phase).toBe('session-complete');
   });
 
@@ -40,16 +49,18 @@ describe('a Session is five Orbits', () => {
   it('counts Hands and Orbits so the table can always say where it is', () => {
     const seen: Array<[number, number]> = [];
     playSession(103, (state) => seen.push([state.handNumber, state.orbit]));
+    expect(seen).toHaveLength(HANDS);
     expect(seen[0]).toEqual([1, 1]);
-    expect(seen[5]).toEqual([6, 1]);
-    expect(seen[6]).toEqual([7, 2]);
-    expect(seen[29]).toEqual([30, 5]);
+    // The Orbit ticks over exactly on the Seat-count boundary, not before.
+    expect(seen[SEATS - 1]).toEqual([SEATS, 1]);
+    expect(seen[SEATS]).toEqual([SEATS + 1, 2]);
+    expect(seen[HANDS - 1]).toEqual([HANDS, ORBITS]);
   });
 
   it('gives every Seat the Button once per Orbit', () => {
     const buttons: number[] = [];
     let state = createSession({ seed: 104 });
-    for (let hand = 0; hand < 6; hand++) {
+    for (let hand = 0; hand < SEATS; hand++) {
       state = advance(state);
       buttons.push(state.buttonSeat);
       while (state.phase !== 'hand-complete') {
@@ -57,7 +68,7 @@ describe('a Session is five Orbits', () => {
       }
       state = advance(state);
     }
-    expect(new Set(buttons).size).toBe(6);
+    expect(new Set(buttons).size).toBe(SEATS);
   });
 
   it('does not end early just because somebody went broke', () => {
@@ -68,7 +79,7 @@ describe('a Session is five Orbits', () => {
       if (state.seats.some((seat) => seat.stack === 0)) sawARebuy = true;
     });
     expect(sawARebuy).toBe(true);
-    expect(hands).toBe(30);
+    expect(hands).toBe(HANDS);
     expect(final.phase).toBe('session-complete');
   });
 });

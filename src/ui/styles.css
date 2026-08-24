@@ -252,6 +252,16 @@ button:disabled {
   font-weight: 700;
 }
 
+/* An Orbit is only meaningful if you know how many Hands it is. */
+.topbar__hint {
+  margin-left: 7px;
+  padding-left: 7px;
+  border-left: 1px solid var(--line-soft);
+  color: var(--ink-faint);
+  font-size: 11px;
+  letter-spacing: 0;
+}
+
 .topbar__street {
   padding: 3px 14px;
   border-radius: 999px;
@@ -706,25 +716,29 @@ button:disabled {
 /* The big centre pip, tucked to the lower right so the corner index stays clear. */
 .card__pip {
   position: absolute;
-  right: 3px;
-  bottom: 0;
-  opacity: 0.9;
+  right: 4px;
+  bottom: 3px;
+  /* line-height 1 so the offset below is measured from the glyph, not from a
+     box with the font's own leading padded underneath it. */
+  line-height: 1;
+  opacity: 0.88;
 }
 
 .card--board .card__pip {
-  font-size: 40px;
-  right: 4px;
-  bottom: -4px;
+  font-size: 34px;
+  right: 6px;
+  bottom: 5px;
 }
 
 .card--hole .card__pip {
-  font-size: 27px;
-  bottom: -3px;
+  font-size: 23px;
+  bottom: 4px;
 }
 
 .card--mini .card__pip {
-  font-size: 21px;
-  bottom: -2px;
+  font-size: 18px;
+  right: 3px;
+  bottom: 3px;
 }
 
 .card--red {
@@ -1220,12 +1234,6 @@ button:disabled {
   font-size: 19px;
 }
 
-.reveal__hint {
-  margin: 0;
-  font-size: 12px;
-  color: var(--ink-faint);
-  line-height: 1.7;
-}
 
 /* The board, repeated here: two hole cards mean nothing without it, and the
    panel covers the felt. */

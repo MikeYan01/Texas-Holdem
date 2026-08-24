@@ -13,9 +13,9 @@ export type ActionLogProps = {
  * a toast that fades.
  *
  * It scrolls inside its own box and pins itself to the bottom, so the newest
- * lines are the ones on screen. That is not cosmetic: thirty Hands of commentary
- * is unbounded, and anything that let it size the page would drag the felt taller
- * with it until the table no longer fitted on screen.
+ * lines are the ones on screen. That is not cosmetic: a whole Session of
+ * commentary is unbounded, and anything that let it size the page would drag the
+ * felt taller with it until the table no longer fitted on screen.
  */
 export function ActionLog({ lines, collapsed, onToggle }: ActionLogProps) {
   const scrollRef = useRef<HTMLDivElement>(null);

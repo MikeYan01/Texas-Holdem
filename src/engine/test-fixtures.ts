@@ -1,7 +1,7 @@
 // Fixtures for engine tests.
 //
 // The point of the engine being a pure reducer over an explicit state is that a
-// test can write down the position it cares about instead of playing thirty
+// test can write down the position it cares about instead of playing dozens of
 // actions to reach it. `positionAt` is that: hand a partial description of a
 // table, get back a state you can call `reduce` on.
 

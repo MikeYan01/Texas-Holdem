@@ -35,11 +35,18 @@ export function TableScreen({ controller }: { controller: GameController }) {
   return (
     <main className="screen screen--table">
       <header className="topbar">
-        <span className="topbar__counter">
+        <span
+          className="topbar__counter"
+          title="一手牌:从下盲注、发底牌,到摊牌或只剩一人、底池分完为止"
+        >
           第 <strong>{Math.max(1, session.handNumber)}</strong> / {session.config.handsPerSession} 手
         </span>
-        <span className="topbar__counter">
+        <span
+          className="topbar__counter"
+          title={`一圈:Button 绕桌一周,共 ${session.config.seatCount} 手。一圈之内每个座位各当过一次庄位、小盲和大盲`}
+        >
           第 <strong>{Math.max(1, session.orbit)}</strong> / {totalOrbits} 圈
+          <span className="topbar__hint">每圈 {session.config.seatCount} 手</span>
         </span>
         <span className="topbar__street">{STREET_NAMES[session.street]}</span>
         <span className="topbar__blinds">盲注 1 / 2(起始码量 100 BB)</span>

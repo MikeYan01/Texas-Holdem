@@ -1,4 +1,4 @@
-import { bestFive, evaluateHand } from '../../poker-math/evaluate-hand.ts';
+import { evaluateHand } from '../../poker-math/evaluate-hand.ts';
 import type { Card } from '../../poker-math/cards.ts';
 import type { SessionState } from '../../engine/types.ts';
 import { describeHand } from '../text/hand-description.ts';
@@ -50,9 +50,6 @@ export function RevealPanel({
     <section className="reveal">
       <header className="reveal__head">
         <h2>复盘亮牌</h2>
-        <p className="reveal__hint">
-          每手结束后无条件展开所有底牌,包括中途弃牌的人——这是单机局才有的学习机会。
-        </p>
       </header>
 
       <div className="reveal__board">
@@ -101,10 +98,6 @@ export function RevealPanel({
         {session.seats.map((seat) => {
           const winning = winningCards.get(seat.index);
           const made = finalHand(seat.holeCards);
-          const best =
-            seat.holeCards && session.board.length >= 3
-              ? bestFive([...seat.holeCards, ...session.board])
-              : [];
           return (
             <div
               key={seat.index}
@@ -120,7 +113,9 @@ export function RevealPanel({
                     key={i}
                     card={card}
                     size="mini"
-                    highlighted={(winning ?? best).includes(card)}
+                    // Only the winner's cards. Ringing everyone's own best five
+                    // made every Seat look like it had won.
+                    highlighted={winning?.includes(card) ?? false}
                   />
                 ))}
               </div>
