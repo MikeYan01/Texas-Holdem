@@ -18,6 +18,12 @@ export type EquityResult = {
   readonly samples: number;
 };
 
+// A chop counts as half a pot however many players share it. Heads-up that is
+// exact; three ways it credits 1/2 where 1/3 is true. Three-way chops are rare
+// enough (well under 0.1% of showdowns) that the bias is far inside the ±1.2%
+// sampling error, and the alternative — weighting by the number of players tied —
+// would break the `equity = win + tie / 2` identity that every caller relies on.
+
 /**
  * Every hand a single opponent could hold on the river.
  *

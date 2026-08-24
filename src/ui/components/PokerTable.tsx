@@ -13,7 +13,7 @@ function seatPosition(visualIndex: number, seatCount: number): React.CSSProperti
   const angle = ((90 + (visualIndex * 360) / seatCount) * Math.PI) / 180;
   return {
     left: `${50 + 41 * Math.cos(angle)}%`,
-    top: `${50 + 39 * Math.sin(angle)}%`,
+    top: `${50 + 38 * Math.sin(angle)}%`,
   };
 }
 
@@ -32,31 +32,36 @@ export function PokerTable({ controller }: { controller: GameController }) {
 
   return (
     <div className="felt">
-      <div className="felt__rail" />
+      <div className="felt__rail" aria-hidden="true" />
+      <div className="felt__inlay" aria-hidden="true" />
+      <div className="felt__sheen" aria-hidden="true" />
 
-      <div className="board">
-        {[0, 1, 2, 3, 4].map((i) => (
-          <PlayingCard
-            key={`${i}-${board[i] ?? 'empty'}`}
-            card={board[i]}
-            hidden={board[i] === undefined}
-            size="board"
-            dealIndex={i}
-          />
-        ))}
-      </div>
+      <div className="middle">
+        <div className="board">
+          {[0, 1, 2, 3, 4].map((i) => (
+            <PlayingCard
+              key={`${i}-${board[i] ?? 'empty'}`}
+              card={board[i]}
+              placeholder={board[i] === undefined}
+              size="board"
+              dealIndex={i}
+            />
+          ))}
+        </div>
 
-      <div className="pots">
-        {pots.length === 0 && <div className="pot pot--empty">底池 0</div>}
-        {pots.map((pot, index) => (
-          <div key={index} className={`pot ${index > 0 ? 'pot--side' : ''}`}>
-            <span className="pot__name">{potName(index)}</span>
-            <span className="pot__amount">{pot.amount}</span>
-          </div>
-        ))}
-        {/* What is in the middle once the bets in front of the Seats are counted,
-            which is the number pot odds are read off. */}
-        {middle > gathered && <div className="pot pot--total">总计 {middle}</div>}
+        <div className="pots">
+          {pots.length === 0 && <div className="pot pot--empty">底池 0</div>}
+          {pots.map((pot, index) => (
+            <div key={index} className={`pot ${index > 0 ? 'pot--side' : ''}`}>
+              <span className="chip chip--pot" aria-hidden="true" />
+              <span className="pot__name">{potName(index)}</span>
+              <span className="pot__amount">{pot.amount}</span>
+            </div>
+          ))}
+          {/* What is in the middle once the bets in front of the Seats are
+              counted, which is the number pot odds are read off. */}
+          {middle > gathered && <div className="pot pot--total">总计 {middle}</div>}
+        </div>
       </div>
 
       {seats.map((seat) => {
@@ -67,7 +72,7 @@ export function PokerTable({ controller }: { controller: GameController }) {
             key={seat.index}
             seat={seat}
             name={nameOf(seat.index)}
-            blurb={key ? PERSONALITY_BLURBS[key] : null}
+            blurb={key ? PERSONALITY_BLURBS[key] : '本人'}
             holeCards={visibleHoleCards(session, seat.index)}
             isButton={seat.index === buttonSeat}
             isActive={session.phase === 'awaiting-action' && seat.index === actorSeat}
@@ -95,6 +100,7 @@ export function PokerTable({ controller }: { controller: GameController }) {
               } as React.CSSProperties
             }
           >
+            <span className="chip" aria-hidden="true" />
             {animation.amount}
           </div>
         );

@@ -33,13 +33,14 @@ export function SeatBadge({
   style,
 }: SeatBadgeProps) {
   const score = scoreOf(seat);
+  const allIn = seat.stack === 0 && !seat.folded;
   const className = [
     'seat',
     isActive ? 'seat--active' : '',
     seat.folded ? 'seat--folded' : '',
     isPlayer ? 'seat--player' : '',
     isWinner ? 'seat--winner' : '',
-    seat.stack === 0 && !seat.folded ? 'seat--allin' : '',
+    allIn ? 'seat--allin' : '',
   ]
     .filter(Boolean)
     .join(' ');
@@ -61,29 +62,43 @@ export function SeatBadge({
       </div>
 
       <div className="seat__plate">
-        <div className="seat__name">
-          {name}
-          {isButton && <span className="seat__button" title="Button">D</span>}
+        {isActive && <span className="seat__ring" aria-hidden="true" />}
+        <div className="seat__identity">
+          <span className="seat__avatar" aria-hidden="true">
+            {isPlayer ? '★' : name.slice(0, 1)}
+          </span>
+          <span className="seat__who">
+            <span className="seat__name">{name}</span>
+            {blurb && <span className="seat__blurb">{blurb}</span>}
+          </span>
+          {isButton && (
+            <span className="seat__button" title="Button">
+              D
+            </span>
+          )}
         </div>
-        {blurb && <div className="seat__blurb">{blurb}</div>}
+
         <div className="seat__numbers">
-          <span className="seat__stack" title="Stack:这手牌面前的筹码">
-            码量 {chips(seat.stack)}
+          <span className="seat__stat" title="Stack:这手牌面前的筹码">
+            <span className="seat__stat-label">码量</span>
+            <span className="seat__stack">{chips(seat.stack)}</span>
           </span>
-          <span
-            className={`seat__score ${score < 0 ? 'is-down' : score > 0 ? 'is-up' : ''}`}
-            title="Score:整局累计净胜负"
-          >
-            净胜负 {score > 0 ? '+' : ''}
-            {chips(score)}
+          <span className="seat__stat" title="Score:整局累计净胜负">
+            <span className="seat__stat-label">净胜负</span>
+            <span className={`seat__score ${score < 0 ? 'is-down' : score > 0 ? 'is-up' : ''}`}>
+              {score > 0 ? '+' : ''}
+              {chips(score)}
+            </span>
           </span>
         </div>
-        {seat.stack === 0 && !seat.folded && <div className="seat__tag">all-in</div>}
-        {seat.folded && <div className="seat__tag seat__tag--folded">已弃牌</div>}
+
+        {allIn && <span className="seat__tag seat__tag--allin">all-in</span>}
+        {seat.folded && <span className="seat__tag seat__tag--folded">已弃牌</span>}
       </div>
 
       {seat.streetCommitted > 0 && (
         <div className="seat__bet" key={seat.streetCommitted}>
+          <span className="chip" aria-hidden="true" />
           {chips(seat.streetCommitted)}
         </div>
       )}

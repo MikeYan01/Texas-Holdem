@@ -12,6 +12,10 @@ import { PlayingCard } from './PlayingCard.tsx';
  * folded on the flop. This is not Showdown: Showdown is a rule of Hold'em and
  * does not happen every Hand. Reveal always happens, and only ever after the
  * money has already moved, so it cannot influence a decision.
+ *
+ * The board is repeated here rather than left on the felt behind the panel. Two
+ * hole cards on their own say nothing — the whole point is reading them against
+ * the five community cards, and a panel that covers those is useless.
  */
 export function RevealPanel({
   session,
@@ -23,10 +27,19 @@ export function RevealPanel({
   onNext: () => void;
 }) {
   const awards = session.events.filter((event) => event.type === 'pot-awarded');
+
   const winningCards = new Map<number, readonly Card[]>();
+  const boardCardsThatWon = new Set<Card>();
   for (const award of awards) {
-    for (const winner of award.winners) winningCards.set(winner.seat, winner.bestFive ?? []);
+    for (const winner of award.winners) {
+      winningCards.set(winner.seat, winner.bestFive ?? []);
+      for (const card of winner.bestFive ?? []) {
+        if (session.board.includes(card)) boardCardsThatWon.add(card);
+      }
+    }
   }
+
+  const showdownReached = session.board.length === 5;
 
   const finalHand = (hole: readonly [Card, Card] | null): string | null => {
     if (!hole || session.board.length < 3) return null;
@@ -41,6 +54,29 @@ export function RevealPanel({
           每手结束后无条件展开所有底牌,包括中途弃牌的人——这是单机局才有的学习机会。
         </p>
       </header>
+
+      <div className="reveal__board">
+        <span className="reveal__board-label">公共牌</span>
+        <div className="reveal__board-cards">
+          {[0, 1, 2, 3, 4].map((i) => (
+            <PlayingCard
+              key={i}
+              card={session.board[i]}
+              placeholder={session.board[i] === undefined}
+              size="board"
+              highlighted={
+                session.board[i] !== undefined && boardCardsThatWon.has(session.board[i]!)
+              }
+            />
+          ))}
+        </div>
+        {!showdownReached && (
+          <span className="reveal__board-note">
+            这手牌在{session.board.length === 0 ? '翻牌前' : '发完之前'}就结束了,
+            剩下的公共牌没有发出
+          </span>
+        )}
+      </div>
 
       <div className="reveal__pots">
         {awards.map((award) => (
