@@ -50,8 +50,8 @@ export function TableScreen({ controller }: { controller: GameController }) {
         </span>
         <span className="topbar__street">{STREET_NAMES[session.street]}</span>
         <span className="topbar__blinds">
-          盲注 {session.config.smallBlind} / {session.config.bigBlind}(起始码量{' '}
-          {session.config.startingStack / session.config.bigBlind} BB)
+          盲注 {session.config.smallBlind} / {session.config.bigBlind} · 起始码量{' '}
+          {session.config.startingStack}
         </span>
       </header>
 

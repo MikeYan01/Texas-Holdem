@@ -31,7 +31,10 @@ export function ResultsScreen({
                 {score > 0 ? '+' : ''}
                 {score}
               </span>
-              <span className="ranking__buyin">补码 {(seat.boughtIn - 200) / 200} 次</span>
+              <span className="ranking__buyin">
+                补码 {(seat.boughtIn - session.config.startingStack) / session.config.startingStack}{' '}
+                次
+              </span>
             </li>
           );
         })}

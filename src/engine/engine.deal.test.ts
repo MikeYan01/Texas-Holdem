@@ -3,7 +3,14 @@ import { formatCards } from '../poker-math/cards.ts';
 import { createSession, reduce } from './engine.ts';
 import { chipsInPlay, scoreSum, visibleHoleCards } from './selectors.ts';
 import { positionAt } from './test-fixtures.ts';
-import { IllegalActionError, type PlayerAction, type SessionState } from './types.ts';
+import {
+  DEFAULT_CONFIG,
+  IllegalActionError,
+  type PlayerAction,
+  type SessionState,
+} from './types.ts';
+
+const STACK = DEFAULT_CONFIG.startingStack;
 
 const advance = (state: SessionState) => reduce(state, { type: 'advance' });
 
@@ -26,8 +33,8 @@ describe('createSession', () => {
     const state = createSession({ seed: 1 });
     expect(state.seats).toHaveLength(6);
     for (const seat of state.seats) {
-      expect(seat.stack).toBe(200);
-      expect(seat.boughtIn).toBe(200);
+      expect(seat.stack).toBe(STACK);
+      expect(seat.boughtIn).toBe(STACK);
     }
     expect(scoreSum(state)).toBe(0);
   });

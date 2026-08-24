@@ -1,7 +1,13 @@
 // Names for things, in Chinese.
 //
-// A few terms stay in English on purpose (AGENTS.md): `BB` and `all-in`, because
-// the Chinese renderings are not what anyone at a table actually says.
+// `all-in` stays in English on purpose (AGENTS.md): the Chinese rendering is not
+// what anyone at a table actually says.
+//
+// Chip counts are always shown as chips, never as big blinds. BB is the right
+// unit for measuring Bot strength — it does not distort when the stakes move —
+// but on screen it is a second name for a quantity already on display, and
+// "40 BB" beside a Seat holding 200 reads as a contradiction rather than as
+// extra information.
 //
 // The Bots' personalities deliberately have no display name here. They are
 // labelled with player names instead (see `bot-names.ts`), and pinning a play

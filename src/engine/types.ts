@@ -110,7 +110,7 @@ export type SessionConfig = {
 
 export const DEFAULT_CONFIG: SessionConfig = {
   seatCount: 6,
-  startingStack: 200,
+  startingStack: 100,
   smallBlind: 2,
   bigBlind: 5,
   // Three Orbits. Long enough that position comes round and the Bots show their

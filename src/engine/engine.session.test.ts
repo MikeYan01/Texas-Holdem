@@ -7,6 +7,7 @@ import { positionAt } from './test-fixtures.ts';
 import { DEFAULT_CONFIG, IllegalActionError, scoreOf, type SessionState } from './types.ts';
 
 const HANDS = DEFAULT_CONFIG.handsPerSession;
+const STACK = DEFAULT_CONFIG.startingStack;
 const SEATS = DEFAULT_CONFIG.seatCount;
 const ORBITS = HANDS / SEATS;
 
@@ -100,34 +101,34 @@ describe('Stack, Score and Rebuy', () => {
 
   it('rebuys a broke Seat back to the starting Stack, debiting its Score', () => {
     const state = positionAt({
-      seats: [{ stack: 0 }, { stack: 300 }, { stack: 300 }],
+      seats: [{ stack: 0 }, { stack: 3 * STACK }, { stack: 3 * STACK }],
       phase: 'hand-complete',
       actorSeat: null,
     });
-    expect(scoreOf(state.seats[0]!)).toBe(-200);
+    expect(scoreOf(state.seats[0]!)).toBe(-STACK);
 
     const next = advance(state);
-    expect(next.seats[0]!.stack).toBe(200);
-    expect(next.seats[0]!.boughtIn).toBe(400);
+    expect(next.seats[0]!.stack).toBe(STACK);
+    expect(next.seats[0]!.boughtIn).toBe(2 * STACK);
     // The Stack is credited and the Score debited by the same amount, so the
     // Score does not move: what was lost stays lost.
-    expect(scoreOf(next.seats[0]!)).toBe(-200);
-    expect(next.events).toContainEqual({ type: 'rebuy', seat: 0, amount: 200 });
+    expect(scoreOf(next.seats[0]!)).toBe(-STACK);
+    expect(next.events).toContainEqual({ type: 'rebuy', seat: 0, amount: STACK });
   });
 
   it('rebuys again and again, so nobody ever leaves the table', () => {
     let state = positionAt({
-      seats: [{ stack: 0 }, { stack: 300 }, { stack: 300 }],
+      seats: [{ stack: 0 }, { stack: 3 * STACK }, { stack: 3 * STACK }],
       phase: 'hand-complete',
       actorSeat: null,
     });
     for (let i = 0; i < 4; i++) {
       state = advance(state); // rebuy and move on
-      expect(state.seats[0]!.stack).toBe(200);
+      expect(state.seats[0]!.stack).toBe(STACK);
       state = { ...state, phase: 'hand-complete', seats: [{ ...state.seats[0]!, stack: 0 }, ...state.seats.slice(1)] };
     }
-    expect(state.seats[0]!.boughtIn).toBe(1000);
-    expect(scoreOf(state.seats[0]!)).toBe(-1000);
+    expect(state.seats[0]!.boughtIn).toBe(5 * STACK);
+    expect(scoreOf(state.seats[0]!)).toBe(-5 * STACK);
   });
 
   it('ranks the Seats by Score for the results screen', () => {
