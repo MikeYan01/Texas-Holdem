@@ -5,7 +5,9 @@
 // starting hands, using this repository's own evaluator. Counts are stored rather
 // than probabilities so the data is exactly right and the total is checkable.
 
-import table from './preflop-hand-odds-table.json';
+// The import attribute keeps this loadable under bare Node as well as a bundler,
+// which is what makes the numbers checkable from a one-line script.
+import table from './preflop-hand-odds-table.json' with { type: 'json' };
 
 export type PreflopHandOddsTable = {
   readonly method: string;
