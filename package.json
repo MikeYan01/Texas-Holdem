@@ -1,0 +1,35 @@
+{
+  "name": "texas",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc --noEmit && vite build",
+    "preview": "vite preview",
+    "test": "vitest run",
+    "test:fast": "vitest run --project unit",
+    "test:slow": "vitest run --project slow",
+    "test:watch": "vitest --project unit",
+    "typecheck": "tsc --noEmit",
+    "check:boundary": "node scripts/check-engine-boundary.mjs",
+    "check:all": "npm run typecheck && npm run check:boundary && npm test",
+    "gen:preflop": "node scripts/generate-preflop-table.ts"
+  },
+  "devDependencies": {
+    "@types/react": "^19.2.2",
+    "@types/react-dom": "^19.2.2",
+    "@vitejs/plugin-react": "^5.1.0",
+    "phe": "^0.6.0",
+    "typescript": "^5.9.3",
+    "vite": "^7.2.2",
+    "vitest": "^3.2.4"
+  },
+  "dependencies": {
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0"
+  },
+  "allowScripts": {
+    "esbuild@0.28.2": true
+  }
+}

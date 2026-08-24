@@ -10,17 +10,17 @@
 
 **Status:** ready-for-agent
 
-- [ ] 一个 Session 固定为五个 Orbit,即三十手 Hand
-- [ ] state 中可读出当前 Hand 序号与 Orbit 序号
-- [ ] **Stack 与 Score 是两个独立的量**:Stack 是当前 Hand 面前的有限筹码,Score 是整个 Session 的累计净胜负、可以为负
-- [ ] 任何 Seat 的 Stack 归零时自动 Rebuy 回起始 Stack 200,同时该 Seat 的 Score 等额减少
-- [ ] Rebuy 不设次数上限,任何 Seat 都不会离桌
-- [ ] Session 在第三十手 Hand 结算完毕后终止,**不因任何 Seat 破产而提前结束**
-- [ ] 结算屏显示六个 Seat 按 Score 从高到低排名
-- [ ] 界面把 Score 与 Stack 清楚地区分开显示
-- [ ] **属性测试(本票主验证)**:注入种子化 RNG 与随机合法行动,跑十万手 Hand,每手结束断言:
-  - [ ] 六个 Seat 的 Score 之和恒为 0
-  - [ ] 所有 Stack 非负
-  - [ ] 筹码总额守恒
-- [ ] 该属性测试在 Node 下运行,不需要浏览器
-- [ ] 任一断言失败时,失败的种子可被记录并原样复现
+- [x] 一个 Session 固定为五个 Orbit,即三十手 Hand
+- [x] state 中可读出当前 Hand 序号与 Orbit 序号
+- [x] **Stack 与 Score 是两个独立的量**:Stack 是当前 Hand 面前的有限筹码,Score 是整个 Session 的累计净胜负、可以为负
+- [x] 任何 Seat 的 Stack 归零时自动 Rebuy 回起始 Stack 200,同时该 Seat 的 Score 等额减少
+- [x] Rebuy 不设次数上限,任何 Seat 都不会离桌
+- [x] Session 在第三十手 Hand 结算完毕后终止,**不因任何 Seat 破产而提前结束**
+- [x] 结算屏显示六个 Seat 按 Score 从高到低排名
+- [x] 界面把 Score 与 Stack 清楚地区分开显示
+- [x] **属性测试(本票主验证)**:注入种子化 RNG 与随机合法行动,跑十万手 Hand,每手结束断言:
+  - [x] 六个 Seat 的 Score 之和恒为 0
+  - [x] 所有 Stack 非负
+  - [x] 筹码总额守恒
+- [x] 该属性测试在 Node 下运行,不需要浏览器
+- [x] 任一断言失败时,失败的种子可被记录并原样复现

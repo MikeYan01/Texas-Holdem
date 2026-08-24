@@ -1,0 +1,102 @@
+import { bestFive, evaluateHand } from '../../poker-math/evaluate-hand.ts';
+import type { Card } from '../../poker-math/cards.ts';
+import type { SessionState } from '../../engine/types.ts';
+import { describeHand } from '../text/hand-description.ts';
+import { potName } from '../text/labels.ts';
+import { PlayingCard } from './PlayingCard.tsx';
+
+/**
+ * Reveal (issue 10) — the most instructive thing in the game.
+ *
+ * Once the Hand is settled, every Seat's cards go face up, including everyone who
+ * folded on the flop. This is not Showdown: Showdown is a rule of Hold'em and
+ * does not happen every Hand. Reveal always happens, and only ever after the
+ * money has already moved, so it cannot influence a decision.
+ */
+export function RevealPanel({
+  session,
+  nameOf,
+  onNext,
+}: {
+  session: SessionState;
+  nameOf: (seat: number) => string;
+  onNext: () => void;
+}) {
+  const awards = session.events.filter((event) => event.type === 'pot-awarded');
+  const winningCards = new Map<number, readonly Card[]>();
+  for (const award of awards) {
+    for (const winner of award.winners) winningCards.set(winner.seat, winner.bestFive ?? []);
+  }
+
+  const finalHand = (hole: readonly [Card, Card] | null): string | null => {
+    if (!hole || session.board.length < 3) return null;
+    return describeHand(evaluateHand([...hole, ...session.board]));
+  };
+
+  return (
+    <section className="reveal">
+      <header className="reveal__head">
+        <h2>复盘亮牌</h2>
+        <p className="reveal__hint">
+          每手结束后无条件展开所有底牌,包括中途弃牌的人——这是单机局才有的学习机会。
+        </p>
+      </header>
+
+      <div className="reveal__pots">
+        {awards.map((award) => (
+          <div key={award.potIndex} className="reveal__pot">
+            <span className="reveal__pot-name">
+              {potName(award.potIndex)} {award.amount}
+            </span>
+            {award.winners.map((winner) => (
+              <span key={winner.seat} className="reveal__winner">
+                {nameOf(winner.seat)} +{winner.amount}
+                {winner.handValue !== null && `(${describeHand(winner.handValue)})`}
+              </span>
+            ))}
+            {award.oddChipSeat !== null && (
+              <span className="reveal__odd">余数归 {nameOf(award.oddChipSeat)}</span>
+            )}
+          </div>
+        ))}
+      </div>
+
+      <div className="reveal__seats">
+        {session.seats.map((seat) => {
+          const winning = winningCards.get(seat.index);
+          const made = finalHand(seat.holeCards);
+          const best =
+            seat.holeCards && session.board.length >= 3
+              ? bestFive([...seat.holeCards, ...session.board])
+              : [];
+          return (
+            <div
+              key={seat.index}
+              className={`reveal__seat ${winning ? 'is-winner' : ''} ${seat.folded ? 'is-folded' : ''}`}
+            >
+              <div className="reveal__seat-name">
+                {nameOf(seat.index)}
+                {seat.folded && <span className="reveal__folded">弃牌</span>}
+              </div>
+              <div className="reveal__seat-cards">
+                {(seat.holeCards ?? []).map((card, i) => (
+                  <PlayingCard
+                    key={i}
+                    card={card}
+                    size="mini"
+                    highlighted={(winning ?? best).includes(card)}
+                  />
+                ))}
+              </div>
+              {made && <div className="reveal__made">{made}</div>}
+            </div>
+          );
+        })}
+      </div>
+
+      <button type="button" className="btn btn--primary" onClick={onNext}>
+        下一手
+      </button>
+    </section>
+  );
+}
