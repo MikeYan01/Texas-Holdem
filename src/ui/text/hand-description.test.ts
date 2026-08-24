@@ -27,7 +27,7 @@ describe('describeHand', () => {
   });
 
   it('says the exact phrases the ticket asks for', () => {
-    expect(say('Ah Ad Ks Kc Qh 7d 2s')).toBe('两对,A 带 K,踢脚 Q');
+    expect(say('Ah Ad Ks Kc Qh 7d 2s')).toBe('两对,A 和 K,踢脚 Q');
     expect(say('Th Jd Qs Kc Ah 7d 2s')).toBe('顺子,10 到 A');
     expect(say('Kh 9h 7h 4h 2h 8d 3s')).toBe('同花,K 高');
   });
@@ -57,7 +57,7 @@ describe('describeHand', () => {
 
   it('names the third pair as the two-pair kicker when that is what it is', () => {
     // Three pairs on board and in hand: the queens are the kicker, not the deuce.
-    expect(say('Ah Ad Ks Kc Qh Qd 2s')).toBe('两对,A 带 K,踢脚 Q');
+    expect(say('Ah Ad Ks Kc Qh Qd 2s')).toBe('两对,A 和 K,踢脚 Q');
   });
 
   it('is defined for every hand that can be made', () => {

@@ -86,7 +86,7 @@ describe('describeEvent', () => {
         winners: [{ seat: 1, amount: 120, handValue: twoPair, bestFive: null }],
         oddChipSeat: null,
       }),
-    ).toBe('主池 120 → 岩石1 120(两对,A 带 K,踢脚 Q)');
+    ).toBe('主池 120 → 岩石1 120(两对,A 和 K,踢脚 Q)');
   });
 
   it('names side pots separately', () => {

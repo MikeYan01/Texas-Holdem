@@ -53,7 +53,7 @@ function straightEnds(high: number): { low: string; high: string } {
 }
 
 /**
- * A hand in Chinese, for the Reveal panel: "两对,A 带 K,踢脚 Q".
+ * A hand in Chinese, for the Reveal panel: "两对,A 和 K,踢脚 Q".
  *
  * Every category names its key cards and, where they decide anything, its
  * kickers — a two-pair hand that wins on the kicker should say so.
@@ -82,13 +82,21 @@ export function describeHand(value: HandValue): string {
     case HandCategory.Trips:
       return `${name} ${rank(ranks[0]!)},踢脚 ${ranks.slice(1).map(rank).join(' ')}`;
     case HandCategory.TwoPair:
-      return `${name},${rank(ranks[0]!)} 带 ${rank(ranks[1]!)},踢脚 ${rank(ranks[2]!)}`;
+      return `${name},${rank(ranks[0]!)} 和 ${rank(ranks[1]!)},踢脚 ${rank(ranks[2]!)}`;
     case HandCategory.Pair:
       return `${name} ${rank(ranks[0]!)},踢脚 ${ranks.slice(1).map(rank).join(' ')}`;
     case HandCategory.HighCard:
       return `${name},${rank(ranks[0]!)} 高`;
   }
 }
+
+/**
+ * What a 踢脚 is, for anywhere a hand description is shown. It is the card that
+ * decides the hand when two players hold the same thing, so it is worth
+ * explaining rather than leaving as jargon.
+ */
+export const KICKER_NOTE =
+  '踢脚:牌型相同时用来分高下的闲牌。两人同为一对 A 时,踢脚大的那个赢。';
 
 /** Just the category, for a compact badge. */
 export const describeCategory = (value: HandValue): string => CATEGORY_NAMES[categoryOf(value)];

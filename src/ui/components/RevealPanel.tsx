@@ -1,7 +1,7 @@
 import { evaluateHand } from '../../poker-math/evaluate-hand.ts';
 import type { Card } from '../../poker-math/cards.ts';
 import type { SessionState } from '../../engine/types.ts';
-import { describeHand } from '../text/hand-description.ts';
+import { KICKER_NOTE, describeHand } from '../text/hand-description.ts';
 import { potName } from '../text/labels.ts';
 import { PlayingCard } from './PlayingCard.tsx';
 
@@ -82,7 +82,7 @@ export function RevealPanel({
               {potName(award.potIndex)} {award.amount}
             </span>
             {award.winners.map((winner) => (
-              <span key={winner.seat} className="reveal__winner">
+              <span key={winner.seat} className="reveal__winner" title={KICKER_NOTE}>
                 {nameOf(winner.seat)} +{winner.amount}
                 {winner.handValue !== null && `(${describeHand(winner.handValue)})`}
               </span>
@@ -119,7 +119,11 @@ export function RevealPanel({
                   />
                 ))}
               </div>
-              {made && <div className="reveal__made">{made}</div>}
+              {made && (
+                <div className="reveal__made" title={KICKER_NOTE}>
+                  {made}
+                </div>
+              )}
             </div>
           );
         })}
