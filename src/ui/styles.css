@@ -1025,7 +1025,6 @@ button:disabled {
 .odds__head {
   display: flex;
   align-items: baseline;
-  justify-content: space-between;
   gap: 10px;
 }
 
@@ -1041,17 +1040,7 @@ button:disabled {
   line-height: 1.4;
 }
 
-.odds__equity {
-  font-size: 11px;
-  color: var(--ink-faint);
-  letter-spacing: 0.04em;
-}
 
-.odds__equity strong {
-  font-size: 15px;
-  font-weight: 800;
-  color: var(--accent);
-}
 
 .odds__list {
   list-style: none;

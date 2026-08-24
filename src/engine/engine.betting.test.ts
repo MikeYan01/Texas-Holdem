@@ -2,7 +2,14 @@ import { describe, expect, it } from 'vitest';
 import { createSession, reduce } from './engine.ts';
 import { positionAt } from './test-fixtures.ts';
 import { chipsInPlay } from './selectors.ts';
-import { IllegalActionError, type PlayerAction, type SessionState } from './types.ts';
+import {
+  DEFAULT_CONFIG,
+  IllegalActionError,
+  type PlayerAction,
+  type SessionState,
+} from './types.ts';
+
+const { smallBlind: SB, bigBlind: BB, startingStack: STACK } = DEFAULT_CONFIG;
 
 const advance = (state: SessionState) => reduce(state, { type: 'advance' });
 const act = (state: SessionState, action: PlayerAction) => reduce(state, action);
@@ -31,11 +38,11 @@ describe('blinds and the Button', () => {
     const small = (button + 1) % 6;
     const big = (button + 2) % 6;
 
-    expect(state.seats[small]!.streetCommitted).toBe(1);
-    expect(state.seats[big]!.streetCommitted).toBe(2);
-    expect(state.seats[small]!.stack).toBe(199);
-    expect(state.seats[big]!.stack).toBe(198);
-    expect(state.currentBet).toBe(2);
+    expect(state.seats[small]!.streetCommitted).toBe(SB);
+    expect(state.seats[big]!.streetCommitted).toBe(BB);
+    expect(state.seats[small]!.stack).toBe(STACK - SB);
+    expect(state.seats[big]!.stack).toBe(STACK - BB);
+    expect(state.currentBet).toBe(BB);
   });
 
   it('moves the Button one Seat clockwise every Hand', () => {
@@ -86,7 +93,7 @@ describe('legal actions come from the engine, never from the component', () => {
     const legal = state.legalActions!;
     expect(legal.canCheck).toBe(false);
     expect(legal.canCall).toBe(true);
-    expect(legal.callAmount).toBe(2);
+    expect(legal.callAmount).toBe(BB);
     expect(legal.canBet).toBe(false); // preflop the blind is already a bet
     expect(legal.canRaise).toBe(true);
   });
@@ -128,13 +135,13 @@ describe('raise sizing', () => {
   const threeHanded = (overrides: Parameters<typeof positionAt>[0]) => positionAt(overrides);
 
   it('sets the minimum raise to the size of the last raise', () => {
-    // Blinds 1/2. The big blind is a raise of 2, so the first raise is to 4.
+    // The big blind is itself a raise of one BB, so the first raise is to two.
     const preflop = advance(createSession({ seed: 27 }));
-    expect(preflop.legalActions!.minRaiseTo).toBe(4);
+    expect(preflop.legalActions!.minRaiseTo).toBe(2 * BB);
 
-    const raised = act(preflop, { type: 'raise', to: 6 });
-    // A raise of 4 over 2, so the next full raise must reach 10.
-    expect(raised.legalActions!.minRaiseTo).toBe(10);
+    // Raising to three BB is a raise of two, so the next full raise is to five.
+    const raised = act(preflop, { type: 'raise', to: 3 * BB });
+    expect(raised.legalActions!.minRaiseTo).toBe(5 * BB);
   });
 
   it('rejects a raise below the minimum', () => {
@@ -466,7 +473,8 @@ describe('everybody folds', () => {
 
     expect(state.phase).toBe('hand-complete');
     expect(state.board).toHaveLength(0);
-    expect(state.seats[bigBlind]!.stack).toBe(201);
+    // The big blind gets its uncalled overcall back and takes the small blind.
+    expect(state.seats[bigBlind]!.stack).toBe(STACK + SB);
     expect(chipsInPlay(state)).toBe(before);
   });
 

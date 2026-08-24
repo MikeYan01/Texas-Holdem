@@ -1,14 +1,12 @@
 import { HandCategory } from '../../poker-math/evaluate-hand.ts';
 import type { CategoryChance, HandOdds } from '../../poker-math/hand-odds.ts';
 import { CATEGORY_NAMES } from '../text/hand-description.ts';
-import type { EquityReadout } from '../useGameSession.ts';
 
 export type HandOddsReadoutProps = {
   readonly odds: HandOdds | null;
   readonly top: readonly CategoryChance[];
   /** What the Seat holds right now, or null before the flop. */
   readonly madeNow: HandCategory | null;
-  readonly equity: EquityReadout;
 };
 
 const percent = (value: number): string => {
@@ -18,18 +16,16 @@ const percent = (value: number): string => {
 };
 
 /**
- * What you are likely to end up holding, and how often you win with it.
+ * What you are likely to end up holding.
  *
- * These answer different questions and are worth reading together. Hand Odds is
- * about your own cards only — no opponents in it at all — and is exact: preflop
- * from an exhaustively enumerated table, and after that by counting every
- * remaining run-out. Equity is about beating other people, so it is a simulation
- * against random opponents and carries a sampling error.
+ * About your own cards only — no opponents in it at all — and exact everywhere:
+ * preflop from an exhaustively enumerated table, and after that by counting every
+ * remaining run-out. There is no error bar on any of these numbers.
  *
- * Neither judges the decision. That would need a definition of the correct play,
- * which is a solver's problem and out of scope.
+ * It does not judge the decision. That would need a definition of the correct
+ * play, which is a solver's problem and out of scope.
  */
-export function HandOddsReadout({ odds, top, madeNow, equity }: HandOddsReadoutProps) {
+export function HandOddsReadout({ odds, top, madeNow }: HandOddsReadoutProps) {
   if (!odds) return <div className="odds odds--idle" />;
 
   const strongest = top[0]?.probability ?? 1;
@@ -38,12 +34,6 @@ export function HandOddsReadout({ odds, top, madeNow, equity }: HandOddsReadoutP
     <div className="odds">
       <div className="odds__head">
         <span className="odds__title">成牌概率</span>
-        {equity.value !== null && (
-          <span className="odds__equity" title="对当前仍在局中的对手,赢下这手牌的概率">
-            胜率 <strong>{(equity.value * 100).toFixed(1)}%</strong>
-          </span>
-        )}
-        {equity.pending && <span className="odds__equity">胜率 计算中…</span>}
       </div>
       <div className="odds__context">
         {madeNow === null ? '翻牌前' : `当前 ${CATEGORY_NAMES[madeNow]}`}

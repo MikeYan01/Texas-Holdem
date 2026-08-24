@@ -7,7 +7,6 @@
 // things. Everything here is presentation.
 
 import { measureBalance } from '../src/bots/measure-balance.ts';
-import { DEFAULT_CONFIG } from '../src/engine/types.ts';
 
 const sessions = Number(process.argv[2] ?? 300);
 const started = Date.now();
@@ -20,7 +19,7 @@ for (const r of results) {
   console.log(
     r.key.padEnd(16),
     r.perHand.toFixed(2).padStart(10),
-    (r.perHand / DEFAULT_CONFIG.bigBlind).toFixed(3).padStart(12),
+    r.bbPerHand.toFixed(3).padStart(12),
     r.stderr.toFixed(2).padStart(10),
     String(Math.round(r.total)).padStart(10),
   );

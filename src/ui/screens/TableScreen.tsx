@@ -13,7 +13,7 @@ import { STREET_NAMES } from '../text/labels.ts';
 const CATEGORIES_SHOWN = 5;
 
 export function TableScreen({ controller }: { controller: GameController }) {
-  const { session, log, equity, nameOf, act, nextHand } = controller;
+  const { session, log, nameOf, act, nextHand } = controller;
   const [logCollapsed, setLogCollapsed] = useState(false);
   const playersTurn = isPlayerToAct(session);
   const totalOrbits = session.config.handsPerSession / session.config.seatCount;
@@ -49,7 +49,10 @@ export function TableScreen({ controller }: { controller: GameController }) {
           <span className="topbar__hint">每圈 {session.config.seatCount} 手</span>
         </span>
         <span className="topbar__street">{STREET_NAMES[session.street]}</span>
-        <span className="topbar__blinds">盲注 1 / 2(起始码量 100 BB)</span>
+        <span className="topbar__blinds">
+          盲注 {session.config.smallBlind} / {session.config.bigBlind}(起始码量{' '}
+          {session.config.startingStack / session.config.bigBlind} BB)
+        </span>
       </header>
 
       <div className={`layout ${logCollapsed ? 'layout--log-collapsed' : ''}`}>
@@ -62,7 +65,7 @@ export function TableScreen({ controller }: { controller: GameController }) {
       </div>
 
       <footer className="controls">
-        <HandOddsReadout odds={odds} top={top} madeNow={madeNow} equity={equity} />
+        <HandOddsReadout odds={odds} top={top} madeNow={madeNow} />
         <ActionBar
           legal={playersTurn ? session.legalActions : null}
           waiting={session.phase !== 'hand-complete'}

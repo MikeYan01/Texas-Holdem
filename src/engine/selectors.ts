@@ -67,6 +67,3 @@ export const chipsInPlay = (state: SessionState): number =>
 export const isPlayerToAct = (state: SessionState): boolean =>
   state.phase === 'awaiting-action' && state.actorSeat === state.playerSeat;
 
-/** How many opponents the Player is still up against — the basis for Equity. */
-export const opponentsRemaining = (state: SessionState): number =>
-  state.seats.filter((seat) => !seat.folded && seat.index !== state.playerSeat).length;

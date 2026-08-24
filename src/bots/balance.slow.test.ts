@@ -17,9 +17,12 @@ import { measureBalance } from './measure-balance.ts';
 // The bounds are deliberately loose. They do not pin the balance; they assert
 // that nobody is playing a strategy that cannot win.
 
-/** Chips per Hand. The Bot that broke this was at -10.2; the worst is now ~-1.4. */
-const WORST_ALLOWED = -4;
-const WIDEST_SPREAD = 8;
+// Bounds are in big blinds, not chips: chips per Hand quietly rescales the
+// moment the blinds change, and a guard whose meaning drifts with the stakes is
+// not a guard. The Bot that broke this was at -5.9 BB/hand; the worst is now
+// around -0.4.
+const WORST_ALLOWED_BB = -2;
+const WIDEST_SPREAD_BB = 4;
 
 const results = measureBalance({ sessions: 300 });
 
@@ -30,15 +33,15 @@ describe('the table is a game, not a donation', () => {
 
   it('has nobody haemorrhaging chips to everybody else', () => {
     for (const r of results) {
-      expect(r.perHand, `${r.key} loses ${r.perHand.toFixed(2)} chips per Hand`).toBeGreaterThan(
-        WORST_ALLOWED,
+      expect(r.bbPerHand, `${r.key} loses ${r.bbPerHand.toFixed(3)} BB per Hand`).toBeGreaterThan(
+        WORST_ALLOWED_BB,
       );
     }
   });
 
   it('keeps the whole field within a couple of big blinds of each other', () => {
-    const spread = results[0]!.perHand - results[results.length - 1]!.perHand;
-    expect(spread, `spread is ${spread.toFixed(2)} chips per Hand`).toBeLessThan(WIDEST_SPREAD);
+    const spread = results[0]!.bbPerHand - results[results.length - 1]!.bbPerHand;
+    expect(spread, `spread is ${spread.toFixed(3)} BB per Hand`).toBeLessThan(WIDEST_SPREAD_BB);
   });
 
   it('still adds up to zero, whatever the styles do to each other', () => {

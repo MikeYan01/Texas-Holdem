@@ -1,6 +1,6 @@
 # Texas
 
-网页版单机德州扑克:一名 Player 对五个 Bot,两个 Orbit(十二手 Hand)决出 Score 排名。
+网页版单机德州扑克:一名 Player 对五个 Bot,三个 Orbit(十八手 Hand)决出 Score 排名。
 纯前端、无后端、无真钱。术语一律以 [`CONTEXT.md`](CONTEXT.md) 为准。
 
 ## 跑起来

@@ -12,7 +12,7 @@
 // artefact, and a standard error next to every number.
 
 import { createSession, reduce } from '../engine/engine.ts';
-import { scoreOf, type SessionState } from '../engine/types.ts';
+import { DEFAULT_CONFIG, scoreOf, type SessionState } from '../engine/types.ts';
 import { computeEquity } from '../poker-math/equity.ts';
 import { seededRng } from '../poker-math/rng.ts';
 import { decideWithEquity } from './decide.ts';
@@ -24,6 +24,11 @@ export type BalanceResult = {
   readonly key: PersonalityKey;
   /** Net chips won per Hand. Negative means this style is paying for the table. */
   readonly perHand: number;
+  /**
+   * The same figure in big blinds — the unit that keeps its meaning when the
+   * stakes change. Chips per Hand silently rescales the moment the blinds move.
+   */
+  readonly bbPerHand: number;
   readonly stderr: number;
   readonly hands: number;
   readonly total: number;
@@ -96,6 +101,7 @@ export function measureBalance(options: BalanceOptions = {}): BalanceResult[] {
       return {
         key,
         perHand,
+        bbPerHand: perHand / DEFAULT_CONFIG.bigBlind,
         stderr: Math.sqrt(variance / t.hands),
         hands: t.hands,
         total: t.chips,

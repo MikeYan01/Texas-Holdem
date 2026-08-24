@@ -12,7 +12,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { seededRng, type Rng } from '../poker-math/rng.ts';
 import { createSession, reduce } from '../engine/engine.ts';
-import { isPlayerToAct, opponentsRemaining } from '../engine/selectors.ts';
 import type { GameEvent, PlayerAction, SessionState } from '../engine/types.ts';
 import { PERSONALITIES } from '../bots/personalities.ts';
 import { decide } from '../bots/decide.ts';
@@ -126,18 +125,11 @@ export function seatName(
   return names.get(seat) ?? `${seat + 1} 号位`;
 }
 
-export type EquityReadout = {
-  readonly value: number | null;
-  readonly pending: boolean;
-  readonly opponentCount: number;
-};
-
 export type GameController = {
   readonly session: SessionState;
   readonly log: readonly LogLine[];
   readonly animations: readonly ChipAnimation[];
   readonly seating: ReadonlyMap<number, PersonalityKey>;
-  readonly equity: EquityReadout;
   readonly nameOf: (seat: number) => string;
   readonly act: (action: PlayerAction) => void;
   readonly nextHand: () => void;
@@ -154,12 +146,6 @@ export function useGameSession(options?: {
   const enabled = options?.enabled ?? true;
   const [game, setGame] = useState<Game>(() => newGame(options?.seed ?? randomSeed()));
   const botRng = useRef<Rng>(seededRng(game.seed));
-  const [readout, setReadout] = useState<EquityReadout>({
-    value: null,
-    pending: false,
-    opponentCount: 0,
-  });
-
   const { session } = game;
 
   const advance = useCallback(() => {
@@ -224,36 +210,6 @@ export function useGameSession(options?: {
     return () => clearTimeout(timer);
   }, [enabled, session, game.seating, advance, equity]);
 
-  // The Player's Equity, recomputed whenever it is their turn or the board grows.
-  useEffect(() => {
-    if (!enabled || !isPlayerToAct(session)) {
-      setReadout((current) =>
-        current.value === null && !current.pending ? current : { value: null, pending: false, opponentCount: 0 },
-      );
-      return;
-    }
-    const hole = session.seats[session.playerSeat]?.holeCards;
-    if (!hole) return;
-
-    const opponentCount = opponentsRemaining(session);
-    let cancelled = false;
-    setReadout({ value: null, pending: true, opponentCount });
-
-    void (async () => {
-      const value = await equity({
-        hole,
-        board: session.board,
-        opponentCount,
-        rng: botRng.current,
-      });
-      if (!cancelled) setReadout({ value, pending: false, opponentCount });
-    })();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [enabled, session, equity]);
-
   const nameOf = useCallback(
     (seat: number) => seatName(seat, session.playerSeat, game.names),
     [session.playerSeat, game.names],
@@ -271,13 +227,12 @@ export function useGameSession(options?: {
       log: game.log,
       animations: game.animations,
       seating: game.seating,
-      equity: readout,
       nameOf,
       act,
       nextHand: advance,
       restart,
     }),
-    [session, game.log, game.animations, game.seating, readout, nameOf, act, advance, restart],
+    [session, game.log, game.animations, game.seating, nameOf, act, advance, restart],
   );
 }
 

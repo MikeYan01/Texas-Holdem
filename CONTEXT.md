@@ -1,6 +1,6 @@
 # Texas
 
-一个网页德州扑克游戏:一名 Player 对五个 Bot,十二手牌决出 Score 排名,单机运行,没有真钱。
+一个网页德州扑克游戏:一名 Player 对五个 Bot,十八手牌决出 Score 排名,单机运行,没有真钱。
 
 ## Language
 
@@ -35,7 +35,7 @@ _Avoid_: dealer(本项目里没有荷官这个角色,发牌是引擎的事)
 _Avoid_: seat index, 座位号
 
 **Blind(盲注)**:
-每手 Hand 开始前由 Button 左侧两个 Seat 强制投入的筹码:小盲(SB)一份,大盲(BB)两份。本项目固定为 1 / 2,全程不涨。大盲同时是筹码深度的计量单位——起始 Stack 200 即"100 BB"。
+每手 Hand 开始前由 Button 左侧两个 Seat 强制投入的筹码:小盲(SB)与大盲(BB)。本项目固定为 **2 / 5**,全程不涨。大盲同时是筹码深度的计量单位——起始 Stack 200 即"40 BB",也是衡量 Bot 强弱的单位(BB/hand),因为它不随盲注变化而失真。
 _Avoid_: ante(前注是另一种强制投注,本项目不用)
 
 ### 时间单位
@@ -55,7 +55,7 @@ Button 绕桌一周所经过的六手牌。它是公平单位——一圈之内�
 _Avoid_: lap, cycle, 轮
 
 **Session(一局)**:
-本游戏的完整一次游玩:两个 Orbit,即十二手 Hand。结束时按 Score 排名。
+本游戏的完整一次游玩:三个 Orbit,即十八手 Hand。结束时按 Score 排名。
 _Avoid_: game, match, tournament, 比赛
 
 **Showdown(摊牌)**:
@@ -85,7 +85,7 @@ Stack 归零后自动补回起始 Stack 的动作。Stack 增加多少,该 Seat 
 _Avoid_: reload, top-up, respawn
 
 **Equity(胜率)**:
-在当前底牌与已知公共牌之下,赢得这手 Hand 的概率。Bot 用它决策,Player 在轮到自己行动时也能看到。
+在当前底牌与已知公共牌之下,赢得这手 Hand 的概率。**只有 Bot 用它决策,界面上不显示**——给 Player 看的是 Hand Odds(见下),因为"我会做成什么牌"比一个孤零零的百分比更能建立直觉。
 _Avoid_: odds(赔率是另一回事)、win rate、胜算
 
 **Pot Odds(底池赔率)**:
