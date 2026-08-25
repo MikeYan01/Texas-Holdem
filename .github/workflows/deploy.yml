@@ -42,10 +42,12 @@ jobs:
       - name: Build
         run: npm run build
 
+      # Pages must already be enabled on the repository, with its source set to
+      # GitHub Actions. The default GITHUB_TOKEN cannot create the site itself —
+      # it gets "Resource not accessible by integration" — so `enablement: true`
+      # only turns a one-time setup step into a recurring red build.
       - name: Setup Pages
         uses: actions/configure-pages@v4
-        with:
-          enablement: true
 
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
