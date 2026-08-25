@@ -7,12 +7,14 @@ import { HandOddsReadout } from '../components/HandOddsReadout.tsx';
 import { PokerTable } from '../components/PokerTable.tsx';
 import { RevealPanel } from '../components/RevealPanel.tsx';
 import type { GameController } from '../useGameSession.ts';
-import { STREET_NAMES } from '../text/labels.ts';
+import { streetName } from '../text/labels.ts';
+import { useLocale } from '../locale-context.tsx';
 
 /** How many hand categories to list. Nine is too many to read at a glance. */
 const CATEGORIES_SHOWN = 5;
 
 export function TableScreen({ controller }: { controller: GameController }) {
+  const { locale, t } = useLocale();
   const { session, log, nameOf, act, nextHand } = controller;
   const [logCollapsed, setLogCollapsed] = useState(false);
   const playersTurn = isPlayerToAct(session);
@@ -35,30 +37,32 @@ export function TableScreen({ controller }: { controller: GameController }) {
   return (
     <main className="screen screen--table">
       <header className="topbar">
-        <span
-          className="topbar__counter"
-          title="一手牌:从下盲注、发底牌,到摊牌或只剩一人、底池分完为止"
-        >
-          第 <strong>{Math.max(1, session.handNumber)}</strong> / {session.config.handsPerSession} 手
+        <span className="topbar__counter" title={t.table.handCounterNote}>
+          {t.table.handCounter(Math.max(1, session.handNumber), session.config.handsPerSession)}
         </span>
         <span
           className="topbar__counter"
-          title={`一圈:Button 绕桌一周,共 ${session.config.seatCount} 手。一圈之内每个座位各当过一次庄位、小盲和大盲`}
+          title={t.table.orbitCounterNote(session.config.seatCount)}
         >
-          第 <strong>{Math.max(1, session.orbit)}</strong> / {totalOrbits} 圈
-          <span className="topbar__hint">每圈 {session.config.seatCount} 手</span>
+          {t.table.orbitCounter(Math.max(1, session.orbit), totalOrbits)}
+          <span className="topbar__hint">{t.table.orbitHint(session.config.seatCount)}</span>
         </span>
-        <span className="topbar__street">{STREET_NAMES[session.street]}</span>
+        <span className="topbar__street">{streetName(session.street, locale)}</span>
         <span className="topbar__blinds">
-          盲注 {session.config.smallBlind} / {session.config.bigBlind} · 起始码量{' '}
-          {session.config.startingStack}
+          {t.table.blinds(
+            session.config.smallBlind,
+            session.config.bigBlind,
+            session.config.startingStack,
+          )}
         </span>
       </header>
 
       <div className={`layout ${logCollapsed ? 'layout--log-collapsed' : ''}`}>
         <PokerTable controller={controller} />
         <ActionLog
-          lines={log}
+          entries={log}
+          nameOf={nameOf}
+          playerSeat={session.playerSeat}
           collapsed={logCollapsed}
           onToggle={() => setLogCollapsed((collapsed) => !collapsed)}
         />

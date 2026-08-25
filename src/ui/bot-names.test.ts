@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { seededRng } from '../poker-math/rng.ts';
 import { PERSONALITY_KEYS } from '../bots/personalities.ts';
-import { assignBotNames, BOT_NAMES } from './bot-names.ts';
+import { assignBotNames, BOT_NAMES, playerName, unnamedSeatName } from './bot-names.ts';
+import { LOCALES } from './text/locale.ts';
 
 describe('assignBotNames', () => {
   it('gives every Bot Seat a distinct name and leaves the Player alone', () => {
@@ -45,5 +46,16 @@ describe('assignBotNames', () => {
 
   it('fits on a Seat plate', () => {
     for (const name of BOT_NAMES) expect(name.length).toBeLessThanOrEqual(9);
+  });
+
+  it('leaves the Bot names untranslated, and the Player name translated', () => {
+    // Real surnames are not translated, in either direction.
+    for (const locale of LOCALES) {
+      for (const name of BOT_NAMES) expect(name).not.toMatch(/[\u4e00-\u9fff]/);
+      expect(playerName(locale)).toBeTruthy();
+      expect(unnamedSeatName(2, locale)).toBeTruthy();
+    }
+    expect(playerName('zh')).not.toBe(playerName('en'));
+    expect(unnamedSeatName(2, 'en')).not.toMatch(/[\u4e00-\u9fff]/);
   });
 });

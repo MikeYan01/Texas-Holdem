@@ -1,8 +1,15 @@
 import { useEffect, useLayoutEffect, useRef } from 'react';
-import type { LogLine } from '../text/events.ts';
+import { describeEvent, type SeatNamer } from '../text/events.ts';
+import { useLocale } from '../locale-context.tsx';
+import type { LoggedEvent } from '../useGameSession.ts';
 
 export type ActionLogProps = {
-  readonly lines: readonly LogLine[];
+  /** The events themselves, turned into words here so a language switch reaches
+      back over everything already played. */
+  readonly entries: readonly LoggedEvent[];
+  readonly nameOf: SeatNamer;
+  /** Which Seat the commentary addresses in the second person. */
+  readonly playerSeat: number;
   readonly collapsed: boolean;
   readonly onToggle: () => void;
 };
@@ -17,19 +24,30 @@ export type ActionLogProps = {
  * commentary is unbounded, and anything that let it size the page would drag the
  * felt taller with it until the table no longer fitted on screen.
  */
-export function ActionLog({ lines, collapsed, onToggle }: ActionLogProps) {
+export function ActionLog({ entries, nameOf, playerSeat, collapsed, onToggle }: ActionLogProps) {
+  const { locale, t } = useLocale();
   const scrollRef = useRef<HTMLDivElement>(null);
   const pinnedRef = useRef(true);
 
+  const lines = entries.flatMap((entry) => {
+    const described = describeEvent(entry.event, nameOf, locale, playerSeat);
+    return described ? [{ id: entry.id, ...described }] : [];
+  });
+
   // Follow along only while the reader is already at the bottom. If they have
   // scrolled up to re-read a Hand, leave them where they are.
+  //
+  // The dependency is `entries`, not `lines`: the lines are rebuilt on every
+  // render, so depending on them would re-pin the scroll constantly. `locale` is
+  // in there because switching language rewrites every line, and the reader
+  // should still be looking at the newest one afterwards.
   useLayoutEffect(() => {
     const box = scrollRef.current;
     if (!box || collapsed || !pinnedRef.current) return;
     // scrollTop rather than scrollIntoView: the latter walks up the ancestors and
     // can scroll the page itself.
     box.scrollTop = box.scrollHeight;
-  }, [lines, collapsed]);
+  }, [entries, collapsed, locale]);
 
   useEffect(() => {
     const box = scrollRef.current;
@@ -44,8 +62,8 @@ export function ActionLog({ lines, collapsed, onToggle }: ActionLogProps) {
   if (collapsed) {
     return (
       <aside className="log log--collapsed">
-        <button type="button" className="log__reopen" onClick={onToggle} title="展开行动记录">
-          行动记录 ›
+        <button type="button" className="log__reopen" onClick={onToggle} title={t.log.reopenNote}>
+          {t.log.reopen}
         </button>
       </aside>
     );
@@ -54,9 +72,9 @@ export function ActionLog({ lines, collapsed, onToggle }: ActionLogProps) {
   return (
     <aside className="log">
       <h2 className="log__title">
-        行动记录
-        <button type="button" className="log__toggle" onClick={onToggle} title="收起行动记录">
-          收起 ‹
+        {t.log.title}
+        <button type="button" className="log__toggle" onClick={onToggle} title={t.log.collapseNote}>
+          {t.log.collapse}
         </button>
       </h2>
       <div className="log__scroll" ref={scrollRef}>

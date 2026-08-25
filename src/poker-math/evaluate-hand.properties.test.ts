@@ -13,7 +13,8 @@ import { seededRng } from './rng.ts';
 // The exhaustive run proves the *category* of all 133,784,560 hands, and the
 // differential run proves the *ordering* against `phe`. Neither says anything
 // about `bestFive` or `tiebreakersOf`, which is what the render layer reads to
-// highlight the winning cards and to write "两对,A 带 K". These are the gap.
+// highlight the winning cards and to write "two pair, aces and kings, kicker Q".
+// These are the gap.
 
 const SAMPLES = 60_000;
 

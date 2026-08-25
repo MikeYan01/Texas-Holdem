@@ -1,5 +1,7 @@
-import { rankingByScore } from '../../engine/selectors.ts';
+import { rankingByScore, rebuyCount } from '../../engine/selectors.ts';
 import { scoreOf, type SessionState } from '../../engine/types.ts';
+import { formatScore } from '../text/labels.ts';
+import { useLocale } from '../locale-context.tsx';
 
 export function ResultsScreen({
   session,
@@ -10,12 +12,13 @@ export function ResultsScreen({
   nameOf: (seat: number) => string;
   onRestart: () => void;
 }) {
+  const { locale, t } = useLocale();
   const ranked = rankingByScore(session);
 
   return (
     <main className="screen screen--results">
-      <h1 className="screen__title">本局结束</h1>
-      <p className="screen__lead">{session.config.handsPerSession} 手打完,按净胜负排名。</p>
+      <h1 className="screen__title">{t.results.title}</h1>
+      <p className="screen__lead">{t.results.lead(session.config.handsPerSession)}</p>
 
       <ol className="ranking">
         {ranked.map((seat, place) => {
@@ -28,12 +31,10 @@ export function ResultsScreen({
               <span className="ranking__place">{place + 1}</span>
               <span className="ranking__name">{nameOf(seat.index)}</span>
               <span className={`ranking__score ${score < 0 ? 'is-down' : score > 0 ? 'is-up' : ''}`}>
-                {score > 0 ? '+' : ''}
-                {score}
+                {formatScore(score, locale)}
               </span>
               <span className="ranking__buyin">
-                补码 {(seat.boughtIn - session.config.startingStack) / session.config.startingStack}{' '}
-                次
+                {t.results.rebuys(rebuyCount(seat, session.config))}
               </span>
             </li>
           );
@@ -41,7 +42,7 @@ export function ResultsScreen({
       </ol>
 
       <button type="button" className="btn btn--primary btn--large" onClick={onRestart}>
-        再来一局
+        {t.results.restart}
       </button>
     </main>
   );

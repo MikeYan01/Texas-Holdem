@@ -1,8 +1,9 @@
 import { evaluateHand } from '../../poker-math/evaluate-hand.ts';
 import type { Card } from '../../poker-math/cards.ts';
 import type { SessionState } from '../../engine/types.ts';
-import { KICKER_NOTE, describeHand } from '../text/hand-description.ts';
+import { describeHand, kickerNote } from '../text/hand-description.ts';
 import { potName, potNote } from '../text/labels.ts';
+import { useLocale } from '../locale-context.tsx';
 import { PlayingCard } from './PlayingCard.tsx';
 
 /**
@@ -26,6 +27,8 @@ export function RevealPanel({
   nameOf: (seat: number) => string;
   onNext: () => void;
 }) {
+  const { locale, t } = useLocale();
+  const kicker = kickerNote(locale);
   const awards = session.events.filter((event) => event.type === 'pot-awarded');
 
   const winningCards = new Map<number, readonly Card[]>();
@@ -39,21 +42,23 @@ export function RevealPanel({
     }
   }
 
-  const showdownReached = session.board.length === 5;
+  // Not "showdown reached": a river bet that folds everyone out leaves a complete
+  // board and no Showdown at all. CONTEXT.md keeps those two apart.
+  const boardComplete = session.board.length === 5;
 
   const finalHand = (hole: readonly [Card, Card] | null): string | null => {
     if (!hole || session.board.length < 3) return null;
-    return describeHand(evaluateHand([...hole, ...session.board]));
+    return describeHand(evaluateHand([...hole, ...session.board]), locale);
   };
 
   return (
     <section className="reveal">
       <header className="reveal__head">
-        <h2>复盘亮牌</h2>
+        <h2>{t.reveal.title}</h2>
       </header>
 
       <div className="reveal__board">
-        <span className="reveal__board-label">公共牌</span>
+        <span className="reveal__board-label">{t.reveal.boardLabel}</span>
         <div className="reveal__board-cards">
           {[0, 1, 2, 3, 4].map((i) => (
             <PlayingCard
@@ -67,31 +72,34 @@ export function RevealPanel({
             />
           ))}
         </div>
-        {!showdownReached && (
+        {!boardComplete && (
           <span className="reveal__board-note">
-            这手牌在{session.board.length === 0 ? '翻牌前' : '发完之前'}就结束了,
-            剩下的公共牌没有发出
+            {t.reveal.boardCutShort(session.board.length === 0)}
           </span>
         )}
       </div>
 
       <div className="reveal__pots">
         {awards.map((award) => (
-          <div key={award.potIndex} className="reveal__pot" title={potNote(award.potIndex)}>
+          <div
+            key={award.potIndex}
+            className="reveal__pot"
+            title={potNote(award.potIndex, locale)}
+          >
             <span className="reveal__pot-name">
-              {potName(award.potIndex)} {award.amount}
+              {potName(award.potIndex, locale)} {award.amount}
               <span className="reveal__pot-eligible">
-                {award.eligibleSeats.length} 人有资格
+                {t.reveal.eligible(award.eligibleSeats.length)}
               </span>
             </span>
             {award.winners.map((winner) => (
-              <span key={winner.seat} className="reveal__winner" title={KICKER_NOTE}>
+              <span key={winner.seat} className="reveal__winner" title={kicker}>
                 {nameOf(winner.seat)} +{winner.amount}
-                {winner.handValue !== null && `(${describeHand(winner.handValue)})`}
+                {winner.handValue !== null && ` (${describeHand(winner.handValue, locale)})`}
               </span>
             ))}
             {award.oddChipSeat !== null && (
-              <span className="reveal__odd">余数归 {nameOf(award.oddChipSeat)}</span>
+              <span className="reveal__odd">{t.reveal.oddChip(nameOf(award.oddChipSeat))}</span>
             )}
           </div>
         ))}
@@ -108,7 +116,7 @@ export function RevealPanel({
             >
               <div className="reveal__seat-name">
                 {nameOf(seat.index)}
-                {seat.folded && <span className="reveal__folded">弃牌</span>}
+                {seat.folded && <span className="reveal__folded">{t.reveal.folded}</span>}
               </div>
               <div className="reveal__seat-cards">
                 {(seat.holeCards ?? []).map((card, i) => (
@@ -123,7 +131,7 @@ export function RevealPanel({
                 ))}
               </div>
               {made && (
-                <div className="reveal__made" title={KICKER_NOTE}>
+                <div className="reveal__made" title={kicker}>
                   {made}
                 </div>
               )}
@@ -133,7 +141,7 @@ export function RevealPanel({
       </div>
 
       <button type="button" className="btn btn--primary" onClick={onNext}>
-        下一手
+        {t.reveal.next}
       </button>
     </section>
   );

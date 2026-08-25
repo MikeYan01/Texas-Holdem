@@ -1,6 +1,7 @@
 import { HandCategory } from '../../poker-math/evaluate-hand.ts';
 import type { CategoryChance, HandOdds } from '../../poker-math/hand-odds.ts';
-import { CATEGORY_NAMES } from '../text/hand-description.ts';
+import { categoryName } from '../text/hand-description.ts';
+import { useLocale } from '../locale-context.tsx';
 
 export type HandOddsReadoutProps = {
   readonly odds: HandOdds | null;
@@ -26,6 +27,7 @@ const percent = (value: number): string => {
  * play, which is a solver's problem and out of scope.
  */
 export function HandOddsReadout({ odds, top, madeNow }: HandOddsReadoutProps) {
+  const { locale, t } = useLocale();
   if (!odds) return <div className="odds odds--idle" />;
 
   const strongest = top[0]?.probability ?? 1;
@@ -33,17 +35,17 @@ export function HandOddsReadout({ odds, top, madeNow }: HandOddsReadoutProps) {
   return (
     <div className="odds">
       <div className="odds__head">
-        <span className="odds__title">成牌概率</span>
+        <span className="odds__title">{t.odds.title}</span>
       </div>
       <div className="odds__context">
-        {madeNow === null ? '翻牌前' : `当前 ${CATEGORY_NAMES[madeNow]}`}
-        {odds.cardsToCome > 0 ? ` · 还有 ${odds.cardsToCome} 张公共牌` : ' · 已定型'}
+        {madeNow === null ? t.odds.preflop : t.odds.madeNow(categoryName(madeNow, locale))}
+        {odds.cardsToCome > 0 ? t.odds.cardsToCome(odds.cardsToCome) : t.odds.settled}
       </div>
 
       <ol className="odds__list">
         {top.map((entry) => (
           <li key={entry.category} className="odds__row">
-            <span className="odds__name">{CATEGORY_NAMES[entry.category]}</span>
+            <span className="odds__name">{categoryName(entry.category, locale)}</span>
             <span className="odds__bar">
               <span
                 className="odds__fill"

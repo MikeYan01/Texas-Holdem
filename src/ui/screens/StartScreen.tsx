@@ -1,4 +1,17 @@
 import { DEFAULT_CONFIG } from '../../engine/types.ts';
+import { parseCards } from '../../poker-math/cards.ts';
+import { PlayingCard } from '../components/PlayingCard.tsx';
+import { useLocale } from '../locale-context.tsx';
+
+/**
+ * The best hand in the game, fanned out above the title and dealt one card at a
+ * time as the screen arrives.
+ *
+ * Purely decorative — hence `aria-hidden` — but it is drawn with the same
+ * `PlayingCard` the felt uses rather than with an illustration, so the start
+ * screen is made out of the game it is introducing.
+ */
+const HERO_HAND = parseCards('Ts Js Qs Ks As');
 
 /**
  * One button, no configuration.
@@ -13,17 +26,34 @@ import { DEFAULT_CONFIG } from '../../engine/types.ts';
  * bluffing is most of what there is to learn at this table.
  */
 export function StartScreen({ onStart }: { onStart: () => void }) {
+  const { t } = useLocale();
   const { seatCount, handsPerSession } = DEFAULT_CONFIG;
+
   return (
     <main className="screen screen--start">
-      <h1 className="screen__title">德州扑克</h1>
+      <div className="start__fan" aria-hidden="true">
+        <span className="start__fan-glow" />
+        {HERO_HAND.map((card, index) => (
+          <span key={card} className="start__fan-slot">
+            <PlayingCard card={card} size="board" dealIndex={index} />
+          </span>
+        ))}
+      </div>
+
+      <h1 className="screen__title">{t.appTitle}</h1>
+
+      <div className="start__rule" aria-hidden="true">
+        <span className="start__rule-line" />
+        <span className="start__rule-pip">♠</span>
+        <span className="start__rule-line" />
+      </div>
+
       <p className="screen__lead">
-        {seatCount} 人桌,你对 {seatCount - 1} 个 Bot。打满 {handsPerSession / seatCount} 圈共{' '}
-        {handsPerSession} 手,按净胜负排名。
+        {t.start.lead(seatCount, handsPerSession / seatCount, handsPerSession)}
       </p>
 
       <button type="button" className="btn btn--primary btn--large" onClick={onStart}>
-        开始新局
+        {t.start.begin}
       </button>
     </main>
   );

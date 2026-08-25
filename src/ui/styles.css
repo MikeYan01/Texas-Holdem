@@ -111,20 +111,33 @@ button:disabled {
 .screen--results {
   align-items: center;
   justify-content: center;
-  gap: 22px;
   padding: 48px;
   text-align: center;
+}
+
+.screen--results {
+  gap: 22px;
 }
 
 .screen__title {
   margin: 0;
   font-size: 46px;
   font-weight: 800;
-  letter-spacing: 0.16em;
+  /* Tracking is per language, not global. Wide tracking is what makes four
+     Chinese characters read as a title; the same figure applied to "Texas
+     Hold'em" just pulls the word apart. */
+  letter-spacing: 0.02em;
   background: linear-gradient(180deg, #f4dda2 0%, var(--gold) 45%, var(--gold-deep) 100%);
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
+}
+
+.screen__title:lang(zh) {
+  letter-spacing: 0.18em;
+  /* Tracking adds a space after the last glyph too, which would leave a centred
+     line sitting half a space left of centre. */
+  margin-right: -0.18em;
 }
 
 .screen__lead {
@@ -225,7 +238,9 @@ button:disabled {
   display: flex;
   align-items: center;
   gap: 10px;
-  padding: 4px 6px;
+  /* The right padding reserves the corner the language switch is fixed into,
+     so the blinds never end up underneath it. */
+  padding: 4px 164px 4px 6px;
   color: var(--ink-dim);
   font-size: 13px;
   flex: none;
@@ -1051,13 +1066,23 @@ button:disabled {
   gap: 1px;
 }
 
+/* The label column is fixed rather than auto-sized, so the bars all start at the
+   same x and do not shift as the likeliest categories change from Street to
+   Street. Its width is per language, because the longest name is "Three of a
+   kind" in English (measured at 85px) and 同花顺 in Chinese — sizing the English
+   column to the Chinese one is what used to leave the label sitting on top of
+   its own bar. */
 .odds__row {
   display: grid;
-  grid-template-columns: 44px minmax(0, 1fr) 46px;
+  grid-template-columns: 98px minmax(0, 1fr) 46px;
   align-items: center;
   gap: 8px;
   font-size: 12px;
   line-height: 1.35;
+}
+
+.odds__row:lang(zh) {
+  grid-template-columns: 44px minmax(0, 1fr) 46px;
 }
 
 .odds__name {
@@ -1392,4 +1417,259 @@ button:disabled {
 .ranking__buyin {
   font-size: 12px;
   color: var(--ink-faint);
+}
+
+
+/* ------------------------------------------------------------------ language
+
+   Parked in the corner rather than in the topbar, because it has to be reachable
+   from all three screens and from in front of the Reveal overlay — which is why
+   it outranks the overlay's z-index rather than sitting behind it.
+
+   Each option is written in its own language, so the switch is legible to
+   somebody who cannot read the language currently on screen. */
+
+.langswitch {
+  position: fixed;
+  top: 10px;
+  right: 14px;
+  z-index: 30;
+  display: flex;
+  gap: 2px;
+  padding: 2px;
+  border: 1px solid var(--line-soft);
+  border-radius: 999px;
+  background: rgba(8, 11, 10, 0.72);
+  backdrop-filter: blur(6px);
+  box-shadow: var(--shadow-1);
+}
+
+.langswitch__option {
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--ink-faint);
+  padding: 4px 13px;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  transition:
+    color 140ms var(--ease),
+    background 140ms var(--ease);
+}
+
+.langswitch__option:hover {
+  color: var(--ink-dim);
+}
+
+.langswitch__option.is-active {
+  background: var(--panel-lift);
+  color: var(--gold);
+}
+
+
+/* ============================================================ start screen ==
+
+   The one screen with no information on it, so it is allowed to be a picture.
+   Everything below is decoration, arranged around copy that does not change:
+   a dealt royal flush, the title, a rule, one line, one button. */
+
+.screen--start {
+  position: relative;
+  /* Contains the two backdrop layers below, so their negative z-index cannot
+     escape behind the page itself. */
+  isolation: isolate;
+  overflow: hidden;
+  gap: 0;
+}
+
+/* Two layers, neither of them in the markup because neither of them is content:
+   a pool of felt-coloured light with a warm core, and a vignette closing the
+   corners down so the eye has nowhere else to go. */
+.screen--start::before,
+.screen--start::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+}
+
+.screen--start::before {
+  background:
+    radial-gradient(600px 400px at 50% 33%, rgba(224, 190, 110, 0.1) 0%, transparent 66%),
+    radial-gradient(980px 640px at 50% 40%, rgba(27, 81, 66, 0.4) 0%, transparent 70%);
+}
+
+.screen--start::after {
+  background: radial-gradient(1180px 760px at 50% 48%, transparent 40%, rgba(3, 6, 5, 0.74) 100%);
+}
+
+.start__fan {
+  position: relative;
+  display: flex;
+  justify-content: center;
+  align-items: flex-end;
+  margin-bottom: 40px;
+}
+
+.start__fan-glow {
+  position: absolute;
+  left: 50%;
+  bottom: -30px;
+  width: 360px;
+  height: 96px;
+  transform: translateX(-50%);
+  border-radius: 50%;
+  background: radial-gradient(closest-side, rgba(224, 190, 110, 0.2), transparent);
+  filter: blur(15px);
+}
+
+/* Rotating about a point well below the card gives a wide, shallow arc: the tops
+   splay apart while the bottoms stay gathered, which is how a hand actually
+   sits in someone's fingers. */
+.start__fan-slot {
+  margin: 0 -14px;
+  transform-origin: 50% 170%;
+}
+
+/* The glow is the first child, so the cards start at two. */
+.start__fan-slot:nth-child(2) {
+  transform: rotate(-13deg);
+}
+
+.start__fan-slot:nth-child(3) {
+  transform: rotate(-6.5deg);
+}
+
+.start__fan-slot:nth-child(4) {
+  transform: translateY(-6px);
+}
+
+.start__fan-slot:nth-child(5) {
+  transform: rotate(6.5deg);
+}
+
+.start__fan-slot:nth-child(6) {
+  transform: rotate(13deg);
+}
+
+/* Hero-sized cards. The felt's 56px board card is right beside five Seats and
+   wrong as the only thing on the screen. */
+.start__fan .card--board {
+  width: 78px;
+  height: 110px;
+  border-radius: 9px;
+  box-shadow:
+    0 2px 3px rgba(0, 0, 0, 0.34),
+    0 16px 34px rgba(0, 0, 0, 0.52);
+}
+
+.start__fan .card--board .card__corner {
+  top: 7px;
+  left: 8px;
+}
+
+.start__fan .card--board .card__rank {
+  font-size: 27px;
+}
+
+.start__fan .card--board .card__suit {
+  font-size: 17px;
+}
+
+.start__fan .card--board .card__pip {
+  font-size: 48px;
+  right: 8px;
+  bottom: 6px;
+}
+
+.start__rule {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  width: min(340px, 56%);
+  margin: 20px 0 24px;
+}
+
+.start__rule-line {
+  flex: 1;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--gold-deep));
+}
+
+.start__rule-line:last-child {
+  background: linear-gradient(90deg, var(--gold-deep), transparent);
+}
+
+.start__rule-pip {
+  /* Big enough to read as a spade. Below about 15px the stem disappears and it
+     turns into an anonymous diamond. */
+  color: var(--gold-deep);
+  font-size: 17px;
+  line-height: 1;
+  transform: translateY(-1px);
+}
+
+.screen--start .screen__lead {
+  max-width: 520px;
+  margin-bottom: 38px;
+  line-height: 2;
+}
+
+/* A pill rather than a slab, lit from inside and sitting in its own pool of
+   gold. It is the only thing on the screen you can press. */
+.screen--start .btn--large {
+  border-radius: 999px;
+  padding: 16px 54px;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.34),
+    0 10px 30px rgba(224, 190, 110, 0.14),
+    var(--shadow-2);
+}
+
+.screen--start .btn--large:hover:not(:disabled) {
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.42),
+    0 16px 42px rgba(224, 190, 110, 0.3),
+    var(--shadow-2);
+}
+
+.screen--start .btn--large:active:not(:disabled) {
+  box-shadow: inset 0 2px 5px rgba(89, 62, 12, 0.4);
+}
+
+/* The cards deal themselves in first (`dealIndex` staggers them), then the type
+   rises underneath. `backwards` rather than `both`, so the finished state hands
+   control back to the ordinary rules — otherwise the button's hover lift would
+   be overridden by the animation's last frame. */
+.screen--start > :not(.start__fan) {
+  animation: start-rise 520ms var(--ease) backwards;
+}
+
+.screen--start .screen__title {
+  animation-delay: 210ms;
+}
+
+.screen--start .start__rule {
+  animation-delay: 290ms;
+}
+
+.screen--start .screen__lead {
+  animation-delay: 360ms;
+}
+
+.screen--start .btn--large {
+  animation-delay: 430ms;
+}
+
+@keyframes start-rise {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
 }

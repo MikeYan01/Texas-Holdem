@@ -1,6 +1,8 @@
 import type { SeatState } from '../../engine/types.ts';
 import { scoreOf } from '../../engine/types.ts';
 import type { Card } from '../../poker-math/cards.ts';
+import { formatChips, formatScore } from '../text/labels.ts';
+import { useLocale } from '../locale-context.tsx';
 import { PlayingCard } from './PlayingCard.tsx';
 
 export type SeatBadgeProps = {
@@ -17,8 +19,6 @@ export type SeatBadgeProps = {
   readonly style: React.CSSProperties;
 };
 
-const chips = (n: number) => n.toLocaleString('zh-CN');
-
 export function SeatBadge({
   seat,
   name,
@@ -30,6 +30,8 @@ export function SeatBadge({
   winningCards,
   style,
 }: SeatBadgeProps) {
+  const { locale, t } = useLocale();
+  const chips = (amount: number) => formatChips(amount, locale);
   const score = scoreOf(seat);
   const allIn = seat.stack === 0 && !seat.folded;
   const className = [
@@ -67,28 +69,27 @@ export function SeatBadge({
           </span>
           <span className="seat__name">{name}</span>
           {isButton && (
-            <span className="seat__button" title="Button">
+            <span className="seat__button" title={t.seat.buttonNote}>
               D
             </span>
           )}
         </div>
 
         <div className="seat__numbers">
-          <span className="seat__stat" title="Stack:这手牌面前的筹码">
-            <span className="seat__stat-label">码量</span>
+          <span className="seat__stat" title={t.seat.stackNote}>
+            <span className="seat__stat-label">{t.seat.stackLabel}</span>
             <span className="seat__stack">{chips(seat.stack)}</span>
           </span>
-          <span className="seat__stat" title="Score:整局累计净胜负">
-            <span className="seat__stat-label">净胜负</span>
+          <span className="seat__stat" title={t.seat.scoreNote}>
+            <span className="seat__stat-label">{t.seat.scoreLabel}</span>
             <span className={`seat__score ${score < 0 ? 'is-down' : score > 0 ? 'is-up' : ''}`}>
-              {score > 0 ? '+' : ''}
-              {chips(score)}
+              {formatScore(score, locale)}
             </span>
           </span>
         </div>
 
         {allIn && <span className="seat__tag seat__tag--allin">all-in</span>}
-        {seat.folded && <span className="seat__tag seat__tag--folded">已弃牌</span>}
+        {seat.folded && <span className="seat__tag seat__tag--folded">{t.seat.folded}</span>}
       </div>
 
       {seat.streetCommitted > 0 && (

@@ -18,8 +18,9 @@ import { decide } from '../bots/decide.ts';
 import { assignPersonalities, makeBotView } from '../bots/view.ts';
 import type { EquityProvider, PersonalityKey } from '../bots/types.ts';
 import { equityProvider } from './equity.ts';
-import { describeEvent, type LogLine } from './text/events.ts';
-import { PLAYER_NAME, assignBotNames } from './bot-names.ts';
+import { playerName, unnamedSeatName, assignBotNames } from './bot-names.ts';
+import { useLocale } from './locale-context.tsx';
+import type { Locale } from './text/locale.ts';
 
 /** How long each automatic step waits, in milliseconds. */
 export const PACING = {
@@ -34,8 +35,21 @@ export const PACING = {
   startHand: 400,
 } as const;
 
-const MAX_LOG_LINES = 240;
+const MAX_LOG_EVENTS = 240;
 const MAX_ANIMATIONS = 16;
+
+/**
+ * One thing that happened, kept as the engine's own event rather than as the
+ * sentence it was rendered into.
+ *
+ * That is what makes the language switch retroactive: the commentary is turned
+ * into words at render time, so changing language re-reads the whole Hand
+ * instead of leaving a Chinese log above an English one (ADR-0008).
+ */
+export type LoggedEvent = {
+  readonly id: string;
+  readonly event: GameEvent;
+};
 
 export type ChipAnimation = {
   readonly id: number;
@@ -48,7 +62,7 @@ export type ChipAnimation = {
 type Game = {
   readonly seed: number;
   readonly session: SessionState;
-  readonly log: readonly LogLine[];
+  readonly log: readonly LoggedEvent[];
   readonly animations: readonly ChipAnimation[];
   readonly seating: ReadonlyMap<number, PersonalityKey>;
   /** Display names, drawn separately from personalities so neither gives the
@@ -93,14 +107,9 @@ function animationsFor(events: readonly GameEvent[], from: number): ChipAnimatio
  */
 function step(game: Game, action: PlayerAction | { type: 'advance' }): Game {
   const session = reduce(game.session, action);
-  const nameOf = (seat: number) => seatName(seat, session.playerSeat, game.names);
 
-  const lines: LogLine[] = [];
   let counter = game.counter;
-  for (const event of session.events) {
-    const described = describeEvent(event, nameOf);
-    if (described) lines.push({ id: `${counter++}`, ...described });
-  }
+  const logged = session.events.map((event) => ({ id: `${counter++}`, event }));
 
   const fresh = animationsFor(session.events, counter);
   counter += fresh.length;
@@ -109,7 +118,7 @@ function step(game: Game, action: PlayerAction | { type: 'advance' }): Game {
     ...game,
     session,
     counter,
-    log: [...game.log, ...lines].slice(-MAX_LOG_LINES),
+    log: [...game.log, ...logged].slice(-MAX_LOG_EVENTS),
     // Animations run once and finish invisible, so old ones can simply be
     // dropped off the end rather than needing a timer to clean them up.
     animations: [...game.animations, ...fresh].slice(-MAX_ANIMATIONS),
@@ -120,14 +129,15 @@ export function seatName(
   seat: number,
   playerSeat: number,
   names: ReadonlyMap<number, string>,
+  locale: Locale,
 ): string {
-  if (seat === playerSeat) return PLAYER_NAME;
-  return names.get(seat) ?? `${seat + 1} 号位`;
+  if (seat === playerSeat) return playerName(locale);
+  return names.get(seat) ?? unnamedSeatName(seat, locale);
 }
 
 export type GameController = {
   readonly session: SessionState;
-  readonly log: readonly LogLine[];
+  readonly log: readonly LoggedEvent[];
   readonly animations: readonly ChipAnimation[];
   readonly seating: ReadonlyMap<number, PersonalityKey>;
   readonly nameOf: (seat: number) => string;
@@ -144,6 +154,7 @@ export function useGameSession(options?: {
 }): GameController {
   const equity = options?.equity ?? equityProvider;
   const enabled = options?.enabled ?? true;
+  const { locale } = useLocale();
   const [game, setGame] = useState<Game>(() => newGame(options?.seed ?? randomSeed()));
   const botRng = useRef<Rng>(seededRng(game.seed));
   const { session } = game;
@@ -211,8 +222,8 @@ export function useGameSession(options?: {
   }, [enabled, session, game.seating, advance, equity]);
 
   const nameOf = useCallback(
-    (seat: number) => seatName(seat, session.playerSeat, game.names),
-    [session.playerSeat, game.names],
+    (seat: number) => seatName(seat, session.playerSeat, game.names, locale),
+    [session.playerSeat, game.names, locale],
   );
 
   const restart = useCallback(() => {

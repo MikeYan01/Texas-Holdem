@@ -2,6 +2,7 @@ import type { Card } from '../../poker-math/cards.ts';
 import { displayPots, potForOdds, visibleHoleCards } from '../../engine/selectors.ts';
 import type { GameController } from '../useGameSession.ts';
 import { potName } from '../text/labels.ts';
+import { useLocale } from '../locale-context.tsx';
 import { PlayingCard } from './PlayingCard.tsx';
 import { SeatBadge } from './SeatBadge.tsx';
 
@@ -18,6 +19,7 @@ function seatPosition(visualIndex: number, seatCount: number): React.CSSProperti
 }
 
 export function PokerTable({ controller }: { controller: GameController }) {
+  const { locale, t } = useLocale();
   const { session, animations, nameOf } = controller;
   const { seats, board, playerSeat, buttonSeat, actorSeat } = session;
   const pots = displayPots(session);
@@ -50,17 +52,19 @@ export function PokerTable({ controller }: { controller: GameController }) {
         </div>
 
         <div className="pots">
-          {pots.length === 0 && <div className="pot pot--empty">底池 0</div>}
+          {pots.length === 0 && <div className="pot pot--empty">{t.table.emptyPot}</div>}
           {pots.map((pot, index) => (
             <div key={index} className={`pot ${index > 0 ? 'pot--side' : ''}`}>
               <span className="chip chip--pot" aria-hidden="true" />
-              <span className="pot__name">{potName(index)}</span>
+              <span className="pot__name">{potName(index, locale)}</span>
               <span className="pot__amount">{pot.amount}</span>
             </div>
           ))}
           {/* What is in the middle once the bets in front of the Seats are
               counted, which is the number pot odds are read off. */}
-          {middle > gathered && <div className="pot pot--total">总计 {middle}</div>}
+          {middle > gathered && (
+            <div className="pot pot--total">{t.table.middleTotal(middle)}</div>
+          )}
         </div>
       </div>
 

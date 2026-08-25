@@ -9,6 +9,7 @@ import { decide } from '../bots/decide.ts';
 import { PERSONALITIES } from '../bots/personalities.ts';
 import { assignPersonalities, makeBotView } from '../bots/view.ts';
 import { describeEvent } from './text/events.ts';
+import { LOCALES } from './text/locale.ts';
 
 // The whole game, with real Bots and real Equity, minus React and minus the
 // clock. Everything the UI adds on top of this is timers and markup: if a whole
@@ -71,11 +72,20 @@ async function playSession(seed: number) {
     for (const event of state.events) {
       if (event.type === 'showdown') stats.sawShowdown = true;
       if (event.type === 'rebuy') stats.sawRebuy = true;
-      // Every event the engine emits has to be renderable in Chinese.
-      const line = describeEvent(event, (s) => (s === state.playerSeat ? '你' : `座位${s}`));
-      if (line) {
-        stats.lines++;
-        expect(line.text).not.toContain('undefined');
+      // Every event the engine emits has to be renderable in every language the
+      // interface offers — a missing translation is a blank line on the felt.
+      for (const locale of LOCALES) {
+        const line = describeEvent(
+          event,
+          (s) => (s === state.playerSeat ? 'you' : `seat${s}`),
+          locale,
+          state.playerSeat,
+        );
+        if (!line) continue;
+        if (locale === LOCALES[0]) stats.lines++;
+        expect(line.text, `${event.type} in ${locale}`).not.toContain('undefined');
+        expect(line.text, `${event.type} in ${locale}`).not.toContain('NaN');
+        expect(line.text.trim(), `${event.type} in ${locale}`).not.toBe('');
       }
     }
 

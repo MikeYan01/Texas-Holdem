@@ -7,7 +7,13 @@
 
 import type { Card } from '../poker-math/cards.ts';
 import { buildPots } from './pots.ts';
-import { scoreOf, type Pot, type SeatState, type SessionState } from './types.ts';
+import {
+  scoreOf,
+  type Pot,
+  type SeatState,
+  type SessionConfig,
+  type SessionState,
+} from './types.ts';
 
 /**
  * The cards this viewer may legitimately see at this Seat, or null.
@@ -50,6 +56,16 @@ export function displayPots(state: SessionState): readonly Pot[] {
 /** Everything in the middle, bets included — the number to read pot odds off. */
 export const potForOdds = (state: SessionState): number =>
   state.seats.reduce((sum, seat) => sum + seat.committed, 0);
+
+/**
+ * How many times this Seat has been bought back in (ADR-0002).
+ *
+ * `boughtIn` is the starting Stack plus one starting Stack per Rebuy, so the
+ * count is a division — which makes it a rule, and rules belong on this side of
+ * the seam rather than inside a `<span>`.
+ */
+export const rebuyCount = (seat: SeatState, config: SessionConfig): number =>
+  Math.max(0, Math.round((seat.boughtIn - config.startingStack) / config.startingStack));
 
 /** Seats ranked for the results screen: best Score first, ties broken by Seat. */
 export function rankingByScore(state: SessionState): readonly SeatState[] {

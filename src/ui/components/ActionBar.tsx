@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import type { LegalActions, PlayerAction } from '../../engine/types.ts';
+import { useLocale } from '../locale-context.tsx';
 
 export type ActionBarProps = {
   readonly legal: LegalActions | null;
@@ -16,6 +17,7 @@ export type ActionBarProps = {
  * countdown, deliberately — think as long as you like.
  */
 export function ActionBar({ legal, waiting, onAct }: ActionBarProps) {
+  const { t } = useLocale();
   const [raiseTo, setRaiseTo] = useState(0);
   const canSize = Boolean(legal && (legal.canBet || legal.canRaise));
 
@@ -26,12 +28,12 @@ export function ActionBar({ legal, waiting, onAct }: ActionBarProps) {
   if (!legal) {
     return (
       <div className="actions actions--idle">
-        {waiting ? '等待其他 Seat 行动…' : '　'}
+        {waiting ? t.actions.waiting : '　'}
       </div>
     );
   }
 
-  const raiseVerb = legal.canBet ? '下注' : '加注到';
+  const raiseVerb = legal.canBet ? t.actions.bet : t.actions.raiseTo;
   const submitRaise = (to: number) => {
     if (to >= legal.maxRaiseTo && legal.canAllIn) return onAct({ type: 'all-in' });
     onAct(legal.canBet ? { type: 'bet', to } : { type: 'raise', to });
@@ -46,12 +48,12 @@ export function ActionBar({ legal, waiting, onAct }: ActionBarProps) {
           disabled={!legal.canFold}
           onClick={() => onAct({ type: 'fold' })}
         >
-          弃牌
+          {t.actions.fold}
         </button>
 
         {legal.canCheck ? (
           <button type="button" className="btn btn--call" onClick={() => onAct({ type: 'check' })}>
-            过牌
+            {t.actions.check}
           </button>
         ) : (
           <button
@@ -60,7 +62,7 @@ export function ActionBar({ legal, waiting, onAct }: ActionBarProps) {
             disabled={!legal.canCall}
             onClick={() => onAct({ type: 'call' })}
           >
-            跟注 {legal.callAmount}
+            {t.actions.call(legal.callAmount)}
           </button>
         )}
 
@@ -81,7 +83,7 @@ export function ActionBar({ legal, waiting, onAct }: ActionBarProps) {
           disabled={!canSize}
           onClick={() => setRaiseTo(legal.presets.halfPot)}
         >
-          1/2 池 {legal.presets.halfPot}
+          {t.actions.halfPot(legal.presets.halfPot)}
         </button>
         <button
           type="button"
@@ -89,7 +91,7 @@ export function ActionBar({ legal, waiting, onAct }: ActionBarProps) {
           disabled={!canSize}
           onClick={() => setRaiseTo(legal.presets.pot)}
         >
-          满池 {legal.presets.pot}
+          {t.actions.pot(legal.presets.pot)}
         </button>
         <button
           type="button"
@@ -97,7 +99,7 @@ export function ActionBar({ legal, waiting, onAct }: ActionBarProps) {
           disabled={!legal.canAllIn}
           onClick={() => onAct({ type: 'all-in' })}
         >
-          All-in {legal.allInTo}
+          {t.actions.allIn(legal.allInTo)}
         </button>
 
         <input
@@ -109,7 +111,7 @@ export function ActionBar({ legal, waiting, onAct }: ActionBarProps) {
           step={1}
           value={raiseTo}
           onChange={(event) => setRaiseTo(Number(event.target.value))}
-          aria-label="加注额"
+          aria-label={t.actions.sliderLabel}
         />
       </div>
     </div>
