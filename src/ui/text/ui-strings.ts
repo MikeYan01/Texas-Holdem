@@ -13,6 +13,7 @@
 // `all-in` is left in English in both languages, and the Bots keep their
 // surnames, for the reasons in AGENTS.md.
 
+import type { HandCategory } from '../../poker-math/evaluate-hand.ts';
 import type { Locale } from './locale.ts';
 
 export type UiStrings = {
@@ -93,6 +94,17 @@ export type UiStrings = {
     readonly lead: (hands: number) => string;
     readonly rebuys: (count: number) => string;
     readonly restart: string;
+  };
+
+  readonly rankings: {
+    /** The topbar link. Short — it sits where the Street name used to. */
+    readonly open: string;
+    readonly openNote: string;
+    readonly title: string;
+    readonly lead: string;
+    readonly close: string;
+    /** One line per category, strongest first. */
+    readonly notes: Record<HandCategory, string>;
   };
 };
 
@@ -176,6 +188,25 @@ const zh: UiStrings = {
     lead: (hands) => `${hands} 手打完,按净胜负排名。`,
     rebuys: (count) => `补码 ${count} 次`,
     restart: '再来一局',
+  },
+
+  rankings: {
+    open: '牌型',
+    openNote: '各种牌型的大小与例子',
+    title: '牌型大小',
+    lead: '从你的两张底牌和五张公共牌里,任选五张凑出最大的牌型。下面从大到小。',
+    close: '知道了',
+    notes: {
+      8: '五张同花色的连续牌。10 到 A 这一副叫皇家同花顺,是最大的牌。',
+      7: '四张同点数的牌,外加一张闲牌。',
+      6: '三张同点加一对。比大小先看三条,再看对子。',
+      5: '五张同花色,不必连续。比大小看最大的那张。',
+      4: '五张连续的牌,花色不限。A 可以当 1 用,组成 A-2-3-4-5。',
+      3: '三张同点数的牌,外加两张闲牌。',
+      2: '两个对子,外加一张闲牌。',
+      1: '一对同点数的牌,外加三张闲牌。',
+      0: '以上都不是。比最大的单张,一样大就往下比。',
+    },
   },
 };
 
@@ -265,6 +296,27 @@ const en: UiStrings = {
     lead: (hands) => `${hands} Hands played, ranked on Score.`,
     rebuys: (count) => (count === 1 ? '1 rebuy' : `${count} rebuys`),
     restart: 'Play again',
+  },
+
+  rankings: {
+    open: 'Hands',
+    openNote: 'What beats what, with examples',
+    title: 'Hand rankings',
+    lead:
+      'Make the best five cards you can from your two hole cards and the five on ' +
+      'the board. Strongest first.',
+    close: 'Got it',
+    notes: {
+      8: 'Five in a row, all one suit. Ten through ace is a royal flush, the best hand there is.',
+      7: 'All four cards of one rank, plus a kicker.',
+      6: 'Three of one rank and two of another. The three decide it first.',
+      5: 'Five of one suit, in any order. The highest card decides it.',
+      4: 'Five in a row, suits mixed. The ace can also play low, as A-2-3-4-5.',
+      3: 'Three of one rank, plus two kickers.',
+      2: 'Two ranks paired, plus a kicker.',
+      1: 'Two cards of one rank, plus three kickers.',
+      0: 'None of the above. The highest card plays, then the next.',
+    },
   },
 };
 

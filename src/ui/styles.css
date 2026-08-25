@@ -274,15 +274,23 @@ button:disabled {
   letter-spacing: 0;
 }
 
-.topbar__street {
-  padding: 3px 14px;
+.topbar__help {
+  border: 1px solid rgba(224, 190, 110, 0.45);
   border-radius: 999px;
-  border: 1px solid color-mix(in srgb, var(--gold) 35%, transparent);
-  background: color-mix(in srgb, var(--gold) 10%, transparent);
+  background: rgba(224, 190, 110, 0.07);
   color: var(--gold);
-  letter-spacing: 0.2em;
+  padding: 3px 14px;
   font-size: 12px;
-  font-weight: 600;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  transition:
+    background 140ms var(--ease),
+    border-color 140ms var(--ease);
+}
+
+.topbar__help:hover {
+  background: rgba(224, 190, 110, 0.16);
+  border-color: rgba(224, 190, 110, 0.75);
 }
 
 .topbar__blinds {
@@ -417,20 +425,28 @@ button:disabled {
 }
 
 /* Chip tokens: a striped disc, so money reads as money. */
+/* One casino chip, drawn from three background layers and nothing else.
+ *
+ * The order matters and the version before this had it inside out: it put the
+ * pattern in the middle and a flat dark ring around the outside, which reads as a
+ * gear. A real chip is the other way round — bright spots inset into the *rim*,
+ * with the inlay in the centre. Same three layers, opposite arrangement. */
 .chip {
+  --chip-body: var(--gold);
+  --chip-spot: #fff8e5;
+  --chip-inlay: #f0dcab;
   display: inline-block;
   width: 13px;
   height: 13px;
   border-radius: 50%;
   background:
-    repeating-conic-gradient(
-      from 0deg,
-      var(--gold) 0deg 22deg,
-      #8f6f2e 22deg 44deg
-    );
+    /* a small centre inlay */
+    radial-gradient(circle at 50% 50%, var(--chip-inlay) 0 38%, transparent 39%),
+    /* four wide spots reaching in from the rim */
+    repeating-conic-gradient(from 30deg, var(--chip-spot) 0deg 30deg, transparent 30deg 90deg),
+    var(--chip-body);
   box-shadow:
-    inset 0 0 0 3px rgba(10, 8, 4, 0.55),
-    inset 0 0 0 4px rgba(224, 190, 110, 0.85),
+    inset 0 0 0 1px rgba(0, 0, 0, 0.5),
     var(--shadow-1);
   flex: none;
 }
@@ -1696,4 +1712,194 @@ button:disabled {
     opacity: 1;
     transform: none;
   }
+}
+
+
+/* ================================================================== chips ==
+
+   A Seat's Stack as a block of chips beside its plate.
+
+   One chip is worth 25 — the natural unit at blinds of 2/5 — and every chip is
+   worth the same, so the block grows with the money. Denominations were tried
+   first and are wrong for this: with 100s in the pile a Stack of 512 shows about
+   as many chips as one of 63, which defeats the only purpose of drawing them.
+   Each row steps a colour instead, so a deep Stack still looks like a mixed pile. */
+
+.seat__chips {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  pointer-events: none;
+}
+
+/* Always the inward side. The felt leaves a side Seat about 50px to the rail and
+   several hundred toward the middle — and a real player's chips sit in front of
+   them, not behind. */
+.seat__chips--right {
+  left: calc(100% + 9px);
+}
+
+.seat__chips--left {
+  right: calc(100% + 9px);
+  flex-direction: row-reverse;
+}
+
+.chips {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.chips__row {
+  display: flex;
+}
+
+/* Overlapped, the way chips spread on felt rather than laid out in a line. */
+.chips__row .chip {
+  width: 15px;
+  height: 15px;
+  margin-right: -7px;
+}
+
+.chips__row .chip:last-child {
+  margin-right: 0;
+}
+
+.chip--t0 {
+  --chip-body: #2e9e5b;
+  --chip-spot: #e9f7ee;
+  --chip-inlay: #bfe8d0;
+}
+
+.chip--t1 {
+  --chip-body: #c2352c;
+  --chip-spot: #ffe8e4;
+  --chip-inlay: #f0bdb6;
+}
+
+.chip--t2 {
+  --chip-body: #26313a;
+  --chip-spot: #d6e2ea;
+  --chip-inlay: #93a3ae;
+}
+
+.chip--t3 {
+  --chip-body: var(--gold);
+  --chip-spot: #fff8e5;
+  --chip-inlay: #f0dcab;
+}
+
+.chips__more {
+  color: rgba(255, 255, 255, 0.66);
+  font-size: 10px;
+  font-weight: 700;
+}
+
+/* A folded Seat's chips stay put — they are still its money — but they recede
+   with the rest of the plate. */
+.seat--folded .seat__chips {
+  opacity: 0.7;
+}
+
+
+/* =============================================================== rankings ==
+
+   The rules reference. Unlike the Reveal this one is a proper modal — it covers
+   the log too, because you are reading rather than playing, and it outranks the
+   log's own z-index so nothing pokes through. */
+
+.overlay--modal {
+  padding: 20px;
+  z-index: 22;
+}
+
+.rankings {
+  width: min(760px, 94vw);
+  max-height: 92vh;
+  overflow-y: auto;
+  border: 1px solid #2e3f39;
+  border-radius: var(--radius-l);
+  background: linear-gradient(180deg, #101b18, #0a1210);
+  box-shadow: var(--shadow-3);
+  padding: 22px 26px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  align-items: center;
+  scrollbar-width: thin;
+  scrollbar-color: #2b3a35 transparent;
+}
+
+.rankings__head {
+  text-align: center;
+}
+
+.rankings__head h2 {
+  margin: 0;
+  font-size: 19px;
+  letter-spacing: 0.06em;
+  color: var(--gold);
+}
+
+.rankings__head p {
+  margin: 8px 0 0;
+  color: var(--ink-dim);
+  font-size: 13px;
+  line-height: 1.6;
+  max-width: 520px;
+}
+
+.rankings__list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.rankings__row {
+  display: grid;
+  grid-template-columns: 22px 116px auto minmax(0, 1fr);
+  align-items: center;
+  gap: 12px;
+  padding: 5px 8px;
+  border-radius: var(--radius-s);
+}
+
+/* Zebra rather than rules: nine rows of cards is already a lot of edges. */
+.rankings__row:nth-child(odd) {
+  background: rgba(255, 255, 255, 0.022);
+}
+
+.rankings__place {
+  color: var(--ink-faint);
+  font-size: 12px;
+  font-weight: 700;
+  text-align: right;
+}
+
+.rankings__name {
+  font-weight: 700;
+  font-size: 13px;
+}
+
+.rankings__cards {
+  display: flex;
+  gap: 3px;
+}
+
+/* No deal animation in here: nine hands flying in at once is noise. */
+.rankings__cards .card {
+  animation: none;
+}
+
+.rankings__note {
+  color: var(--ink-dim);
+  font-size: 12px;
+  line-height: 1.5;
 }

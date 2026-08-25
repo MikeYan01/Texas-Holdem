@@ -3,6 +3,7 @@ import { scoreOf } from '../../engine/types.ts';
 import type { Card } from '../../poker-math/cards.ts';
 import { formatChips, formatScore } from '../text/labels.ts';
 import { useLocale } from '../locale-context.tsx';
+import { ChipTray } from './ChipTray.tsx';
 import { PlayingCard } from './PlayingCard.tsx';
 
 export type SeatBadgeProps = {
@@ -17,6 +18,12 @@ export type SeatBadgeProps = {
   readonly winningCards: readonly Card[];
   /** Where round the felt this Seat sits, as a CSS-ready position. */
   readonly style: React.CSSProperties;
+  /**
+   * Which side of the plate the chips sit on. Always the inward side: the felt
+   * leaves only about 50px between a side Seat and the rail, and several hundred
+   * toward the middle — which is also where a real player keeps their chips.
+   */
+  readonly chipsSide: 'left' | 'right';
 };
 
 export function SeatBadge({
@@ -29,6 +36,7 @@ export function SeatBadge({
   isWinner,
   winningCards,
   style,
+  chipsSide,
 }: SeatBadgeProps) {
   const { locale, t } = useLocale();
   const chips = (amount: number) => formatChips(amount, locale);
@@ -87,6 +95,8 @@ export function SeatBadge({
             </span>
           </span>
         </div>
+
+        <ChipTray amount={seat.stack} side={chipsSide} />
 
         {allIn && <span className="seat__tag seat__tag--allin">all-in</span>}
         {seat.folded && <span className="seat__tag seat__tag--folded">{t.seat.folded}</span>}

@@ -13,6 +13,7 @@ import { seatName, type GameController, type LoggedEvent } from './useGameSessio
 import { TableScreen } from './screens/TableScreen.tsx';
 import { ResultsScreen } from './screens/ResultsScreen.tsx';
 import { RevealPanel } from './components/RevealPanel.tsx';
+import { HandRankingsPanel } from './components/HandRankingsPanel.tsx';
 import { LOCALES, type Locale } from './text/locale.ts';
 
 // Does the language switch actually change what is on screen?
@@ -140,6 +141,19 @@ describe('the interface in both languages', () => {
     // The pot summary is the part that reaches back into the engine's events.
     expect(markup).toContain('Main pot');
     expect(render(panel, 'zh')).toContain('主池');
+  });
+
+  it('leaves no Chinese in the hand-rankings panel in English', () => {
+    const panel = <HandRankingsPanel onClose={() => {}} />;
+    const markup = render(panel, 'en');
+    expect(markup).not.toMatch(CJK);
+    expect(markup).toContain('Hand rankings');
+    // All nine categories, each with its five example cards.
+    expect(markup).toContain('Straight flush');
+    expect(markup).toContain('High card');
+    expect(markup.match(/class="card /g) ?? []).toHaveLength(9 * 5);
+    expect(render(panel, 'zh')).toContain('牌型大小');
+    expect(render(panel, 'zh')).toContain('皇家同花顺');
   });
 
   it('leaves no Chinese on the results screen in English', () => {

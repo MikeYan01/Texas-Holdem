@@ -18,6 +18,15 @@ function seatPosition(visualIndex: number, seatCount: number): React.CSSProperti
   };
 }
 
+/**
+ * Which side of a Seat its chips sit on: always toward the middle of the table.
+ * Seats on the right half of the felt keep theirs on their left, and vice versa.
+ */
+function chipsSideFor(visualIndex: number, seatCount: number): 'left' | 'right' {
+  const angle = 90 + (visualIndex * 360) / seatCount;
+  return Math.cos((angle * Math.PI) / 180) > 0.01 ? 'left' : 'right';
+}
+
 export function PokerTable({ controller }: { controller: GameController }) {
   const { locale, t } = useLocale();
   const { session, animations, nameOf } = controller;
@@ -82,6 +91,7 @@ export function PokerTable({ controller }: { controller: GameController }) {
             isWinner={winners.has(seat.index)}
             winningCards={winners.get(seat.index) ?? []}
             style={seatPosition(visualIndex, seats.length)}
+            chipsSide={chipsSideFor(visualIndex, seats.length)}
           />
         );
       })}

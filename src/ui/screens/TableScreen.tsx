@@ -3,20 +3,22 @@ import { handOdds, likeliestCategories, madeCategoryNow } from '../../poker-math
 import { isPlayerToAct } from '../../engine/selectors.ts';
 import { ActionBar } from '../components/ActionBar.tsx';
 import { ActionLog } from '../components/ActionLog.tsx';
+import { HandRankingsPanel } from '../components/HandRankingsPanel.tsx';
 import { HandOddsReadout } from '../components/HandOddsReadout.tsx';
 import { PokerTable } from '../components/PokerTable.tsx';
 import { RevealPanel } from '../components/RevealPanel.tsx';
 import type { GameController } from '../useGameSession.ts';
-import { streetName } from '../text/labels.ts';
+
 import { useLocale } from '../locale-context.tsx';
 
 /** How many hand categories to list. Nine is too many to read at a glance. */
 const CATEGORIES_SHOWN = 5;
 
 export function TableScreen({ controller }: { controller: GameController }) {
-  const { locale, t } = useLocale();
+  const { t } = useLocale();
   const { session, log, nameOf, act, nextHand } = controller;
   const [logCollapsed, setLogCollapsed] = useState(false);
+  const [rankingsOpen, setRankingsOpen] = useState(false);
   const playersTurn = isPlayerToAct(session);
   const totalOrbits = session.config.handsPerSession / session.config.seatCount;
 
@@ -47,7 +49,14 @@ export function TableScreen({ controller }: { controller: GameController }) {
           {t.table.orbitCounter(Math.max(1, session.orbit), totalOrbits)}
           <span className="topbar__hint">{t.table.orbitHint(session.config.seatCount)}</span>
         </span>
-        <span className="topbar__street">{streetName(session.street, locale)}</span>
+        <button
+          type="button"
+          className="topbar__help"
+          title={t.rankings.openNote}
+          onClick={() => setRankingsOpen(true)}
+        >
+          {t.rankings.open}
+        </button>
         <span className="topbar__blinds">
           {t.table.blinds(
             session.config.smallBlind,
@@ -80,6 +89,12 @@ export function TableScreen({ controller }: { controller: GameController }) {
       {session.phase === 'hand-complete' && (
         <div className="overlay">
           <RevealPanel session={session} nameOf={nameOf} onNext={nextHand} />
+        </div>
+      )}
+
+      {rankingsOpen && (
+        <div className="overlay overlay--modal">
+          <HandRankingsPanel onClose={() => setRankingsOpen(false)} />
         </div>
       )}
     </main>
