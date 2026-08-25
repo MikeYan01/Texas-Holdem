@@ -5,6 +5,8 @@ A browser-based Texas Hold'em game. You against five Bots, eighteen Hands, one r
 No backend, no accounts, no real money — open the page and play.
 The interface is in English by default, with Chinese a click away in the corner.
 
+**[Play it here.](https://mikeyan01.github.io/Texas-Holdem/)**
+
 ## The game
 
 Six-handed no-limit Hold'em. Blinds are fixed at 2/5, everyone starts with 100 chips,
@@ -41,6 +43,11 @@ npm run preview    # preview the production build locally
 ```
 
 The build is a set of static files. Drop it on any static host and it runs.
+
+Every push to `main` is typechecked, tested and published to GitHub Pages by
+`.github/workflows/deploy.yml`. Because Pages serves this as a project site under
+`/Texas-Holdem/` rather than at a domain root, the production build sets its base
+path to match; the dev server keeps `/`.
 
 ## Developing
 
