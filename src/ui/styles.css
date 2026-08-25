@@ -55,6 +55,10 @@
   --shadow-3: 0 18px 48px rgba(0, 0, 0, 0.55);
 
   --ease: cubic-bezier(0.22, 0.61, 0.36, 1);
+
+  /* The action log's column. The table grid and the Reveal overlay both measure
+     against it, so it is stated once rather than twice. */
+  --log-width: 300px;
 }
 
 * {
@@ -290,7 +294,7 @@ button:disabled {
 .layout {
   flex: 1;
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 300px;
+  grid-template-columns: minmax(0, 1fr) var(--log-width);
   /* An `auto` row would size to the tallest child, which is the log. Pinning the
      row to the space available is what stops it growing. */
   grid-template-rows: minmax(0, 1fr);
@@ -897,6 +901,10 @@ button:disabled {
 /* ==================================================================== log == */
 
 .log {
+  /* Above the Reveal scrim, so the commentary for the Hand just played stays
+     crisp and readable while everything else dims. */
+  position: relative;
+  z-index: 21;
   display: flex;
   flex-direction: column;
   min-height: 0;
@@ -1014,21 +1022,25 @@ button:disabled {
   border-radius: var(--radius);
   background: linear-gradient(180deg, rgba(16, 24, 22, 0.85), rgba(8, 14, 12, 0.85));
   box-shadow: var(--shadow-2);
-  /* Tall enough for two header lines plus five categories. Anything less clips
-     the least likely one, which is exactly the row worth reading. */
-  height: 158px;
+  /* A floor, not a fixed height. 158px is what two header lines plus five
+     categories need at the metrics this was designed against — but a font
+     fallback with taller line boxes, or a longer context line, pushes past it,
+     and a pinned height combined with `overflow: hidden` below silently ate the
+     fifth row. That row is the least likely category, which is exactly the one
+     worth reading. Growing instead costs the felt a few pixels. */
+  min-height: 158px;
 }
 
 /* ------------------------------------------------------------- hand odds -- */
 
 .odds {
   flex: none;
-  width: 300px;
+  width: var(--log-width);
   display: flex;
   flex-direction: column;
   gap: 3px;
-  min-height: 0;
-  overflow: hidden;
+  /* No `overflow: hidden` here: clipping is what turned "the panel is a little
+     too short" into "the fifth row is missing". The controls grow instead. */
   padding-right: 16px;
   border-right: 1px solid var(--line-soft);
 }
@@ -1180,15 +1192,26 @@ button:disabled {
 
 /* ================================================================= reveal == */
 
+/* The Reveal covers the felt but stops short of the action log, so the running
+   commentary for the Hand you have just played stays readable beside it.
+   The right inset is the log plus the grid gap plus the screen's own padding.
+
+   The scrim is lighter than a normal modal's on purpose: the felt behind it is
+   already showing every Seat's cards in the position you watched them play, and
+   that positional memory is most of how you tell the six of them apart. Blurring
+   it into the background throws that away. */
 .overlay {
   position: fixed;
   inset: 0;
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 20px;
-  background: rgba(3, 6, 5, 0.76);
-  backdrop-filter: blur(5px);
+  /* The scrim covers the whole screen so there is no seam where it stops, and
+     the log is lifted above it instead (see `.log`). The right padding is what
+     keeps the panel centred on the felt rather than sliding under the log. */
+  padding: 20px calc(var(--log-width) + 32px) 20px 20px;
+  background: rgba(3, 6, 5, 0.62);
+  backdrop-filter: blur(2.5px);
   z-index: 20;
   animation: fade-in 180ms var(--ease) both;
 }
@@ -1203,7 +1226,8 @@ button:disabled {
 }
 
 .reveal {
-  width: min(1040px, 94vw);
+  /* 100% of the overlay, which no longer spans the whole viewport. */
+  width: min(1040px, 100%);
   max-height: 92vh;
   overflow-y: auto;
   border: 1px solid #2e3f39;

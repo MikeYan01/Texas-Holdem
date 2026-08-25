@@ -25,10 +25,13 @@ import type { Locale } from './text/locale.ts';
 /** How long each automatic step waits, in milliseconds. */
 export const PACING = {
   // Long enough to actually read what a Bot did before the next one moves. The
-  // spec asked for 600-1200ms; play-testing said that is too quick to follow
-  // five opponents in a row, so it was widened.
-  botThinkMin: 900,
-  botThinkMax: 1900,
+  // spec asked for 600-1200ms; play-testing widened it to 900-1900, and players
+  // still reported the table getting away from them, so it is wider again. Five
+  // opponents acting in sequence is the case that sets this: at the top of the
+  // range a full round of folds takes about thirteen seconds, which is slow to
+  // sit through only if you are not reading it.
+  botThinkMin: 1200,
+  botThinkMax: 2600,
   dealStreet: 800,
   runoutStreet: 1100,
   settle: 950,

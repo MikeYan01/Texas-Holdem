@@ -29,6 +29,19 @@ export function RevealPanel({
 }) {
   const { locale, t } = useLocale();
   const kicker = kickerNote(locale);
+
+  // The same order the felt uses: the Player first, then clockwise. Listing them
+  // by raw Seat index instead is what made the panel hard to read back against
+  // the table — the row of faces had no relationship to the ring you had been
+  // watching all Hand.
+  const seatsInFeltOrder = session.seats
+    .map((seat) => ({
+      seat,
+      visualIndex:
+        (seat.index - session.playerSeat + session.seats.length) % session.seats.length,
+    }))
+    .sort((a, b) => a.visualIndex - b.visualIndex)
+    .map((entry) => entry.seat);
   const awards = session.events.filter((event) => event.type === 'pot-awarded');
 
   const winningCards = new Map<number, readonly Card[]>();
@@ -106,7 +119,7 @@ export function RevealPanel({
       </div>
 
       <div className="reveal__seats">
-        {session.seats.map((seat) => {
+        {seatsInFeltOrder.map((seat) => {
           const winning = winningCards.get(seat.index);
           const made = finalHand(seat.holeCards);
           return (
