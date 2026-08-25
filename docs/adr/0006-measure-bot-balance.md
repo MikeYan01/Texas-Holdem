@@ -1,12 +1,12 @@
-# Bot 的平衡靠实测,不靠调参时的直觉
+# Bot balance rests on measurement, not on intuition while tuning
 
-五个 Bot 的性格参数,任何一次改动都必须用 `npm run measure:bots` 实测过才算数,并且 `src/bots/balance.slow.test.ts` 会守住一条底线:没有任何性格每手净亏超过 **2 BB**,全场极差小于 **4 BB/hand**。
+Any change to the five Bots' personality parameters only counts once it has been measured with `npm run measure:bots`, and `src/bots/balance.slow.test.ts` guards a floor: no personality loses more than **2 BB** per Hand, and the spread across the field stays under **4 BB/hand**.
 
-单位是大盲而不是筹码,这一点是被盲注从 1/2 调到 2/5 时发现的:同一个"−4 chips"的边界,在两种盲注下严格程度差 2.5 倍。**一条会随赌注悄悄改变含义的防线不算防线。**
+The unit is big blinds rather than chips, and that was discovered when the stakes moved from 1/2 blinds to 2/5 blinds: the same "−4 chips" bound is 2.5× stricter under one than under the other. **A guard whose meaning quietly changes with the stakes is not a guard.**
 
-实验本身只有一份,在 `src/bots/measure-balance.ts`,调参工具和回归防线共用它。这不是为了少写几行——**测量工具和它守护的断言必须测的是同一件事**,各留一份副本迟早会漂移成两个实验。
+There is exactly one experiment, in `src/bots/measure-balance.ts`, shared by the tuning tool and the regression guard. This is not about saving a few lines — **the measurement tool and the assertion it guards have to be measuring the same thing**, and a copy on each side drifts into two different experiments sooner or later.
 
-这条规则是被一个已经上线的 bug 逼出来的。原来的第五个性格 `Maniac` 阈值低于底池赔率——`postflopCallMargin: -0.08` 意味着底池赔率要求 20% 胜率时它只要 4%,**每一次跟注都是 -EV**。实测 400 局的结果:
+The rule was forced out by a bug that had already shipped. The fifth personality used to be `Maniac`, whose threshold sat below the Pot Odds — `postflopCallMargin: -0.08` means it demanded 4% Equity where the Pot Odds asked for 20%, so **every call it made was -EV**. Measured over 400 Sessions:
 
 | | chips/hand | BB/hand |
 | --- | --- | --- |
@@ -16,20 +16,20 @@
 | Calling Station | +0.67 | +0.33 |
 | **Maniac** | **−10.23** | **−5.11** |
 
-另外四家全是赢家。一张零和的桌子上这只可能有一个解释:它们都在吃同一个座位。玩家的原话是「基本就是在给大家送钱」,而这不是印象,是可测量的事实。
+The other four were all winners. At a zero-sum table that admits one explanation: they were all feeding off the same Seat. The Player's own words were "it's basically just handing everyone money", and that is not an impression, it is a measurable fact.
 
 ## Considered Options
 
-**靠性格排序测试守住平衡。** 已经有了,而且当时全部通过——它们断言的是相对次序(Rock 入池率低于 Calling Station、诈唬手加注率高于 TAG),**次序一直是对的,桌子却是坏的**。这不是测试写错了:ADR-0003 明确要求断言相对次序而不是具体数字,否则测试会锁死调参。所以平衡性需要一条**独立的、基于实测的**防线,而不是把这条测试改严。
+**Guard balance with the personality-ordering tests.** They already exist, and every one of them was passing at the time — what they assert is relative ordering (Rock enters pots less often than Calling Station, Bluffer raises more often than TAG), and **the ordering was right the whole time the table was broken**. That is not a mistake in the tests: ADR-0003 requires asserting relative ordering rather than specific numbers, or the tests would lock down tuning. Balance therefore needs a **separate guard, based on measurement**, rather than a tightened version of those tests.
 
-**靠打几局凭手感判断。** 否决:德扑单手方差远大于风格之间的差距。十八手一局的噪声足以淹没 1 BB/hand 的系统性差异,凭感觉调参只会在噪声上追着跑。
+**Play a few Sessions and judge by feel.** Rejected: single-Hand variance in NLHE dwarfs the gap between the styles. The noise in an eighteen-Hand Session is enough to bury a systematic 1 BB/hand difference, and tuning by feel only chases that noise.
 
-**让所有性格的期望都归零。** 否决:那等于要求五种打法一样好,而「松且被动是输钱打法」本来就是这个游戏想让玩家看见的事实。允许有输有赢,只是不允许有人是提款机。
+**Force every personality's expectation to zero.** Rejected: that demands five equally good styles, when "loose and passive is a losing style" is exactly the fact this game wants the Player to see. Winners and losers are allowed; a cash machine is not.
 
 ## Consequences
 
-调参的成本变高了:改一个常数就要跑一次 400 局的实测(约 3 秒),而不是改完就提交。这是刻意的。
+Tuning got more expensive: changing one constant now means running the 300-Session measurement (about 3 seconds) instead of changing it and committing. That is deliberate.
 
-`balance.slow.test.ts` 的边界故意放得很松(−4 chips/hand,极差 8),它不锁定平衡,只断言没有人在打一种赢不了的策略。把旧的 `Maniac` 常数放回去,它会报 `Bluffer loses -11.76 chips per Hand` 并失败——这条防线验证过是有牙齿的。
+The bounds in `balance.slow.test.ts` are deliberately loose (−2 BB/hand, spread 4). They do not pin the balance down; they assert only that nobody is playing a strategy that cannot win. The old `Maniac` measured −5.11 BB/hand, which is well past that floor, and when the guard trips it names the offending personality and its BB/hand.
 
-顺带修掉的一个共享模型缺陷:`bluffFrequency` 原本是常数,于是 Bot 在六人桌上和单挑一样频繁地诈唬。诈唬要所有人弃牌才成立,成功率随人数衰减,所以现在按 `bluffFrequency / opponentCount` 缩放。这条对所有性格生效,不是给某一家打的补丁。
+A flaw in the shared model got fixed along the way: `bluffFrequency` used to be a constant, so a Bot bluffed as often six-handed as it would heads-up. A bluff only works if everyone folds, and its success rate decays with the number of opponents, so it now scales as `bluffFrequency / opponentCount`. That applies to every personality; it is not a patch aimed at one of them.

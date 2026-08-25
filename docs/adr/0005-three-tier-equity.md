@@ -1,46 +1,46 @@
-# Equity 分三段计算,不一律用蒙特卡洛
+# Equity is computed in three tiers, not Monte Carlo everywhere
 
-Bot 与 Player 看到的 Equity 按 Street 用三种不同方法算:
+The Equity the Bots and the Player see is computed three different ways, according to the Street:
 
-- **翻牌前**:查表。169 个规范起手牌 × 对手数,离线一次性算好。**精确、零耗时**。
-- **翻牌 / 转牌**:蒙特卡洛 **2000 次**。实测 ±1.2%(1σ),单个 Bot 1.43 ms,五个 Bot 合计 **7 ms**——在一帧(16.7 ms)之内。
-- **河牌**:精确枚举。每个对手只剩 C(44,2) = 946 种可能,全枚举比抽样又快又准。
+- **Preflop**: a lookup table. 169 canonical starting hands × opponent count, computed once, offline. **Exact, zero cost**.
+- **Flop / turn**: Monte Carlo, **2000 iterations**. Measured at ±1.2% (1σ), 1.43 ms for a single Bot, **7 ms** for all five — inside one frame (16.7 ms).
+- **River**: exact enumeration. Each opponent has only C(44,2) = 946 possibilities left, and enumerating all of them is both faster and more accurate than sampling.
 
-计算跑在主线程,但接口是异步的(`await getEquity(...)`),这样将来要挪进 Web Worker 是改一个文件而非重构。
+The computation runs on the main thread, but the interface is asynchronous (`await getEquity(...)`), so moving it into a Web Worker later is a one-file change rather than a refactor.
 
 ## Considered Options
 
-**一律蒙特卡洛。** 否决:翻牌前是最坏情况(还有五张公共牌要发),却又是完全可以预先枚举的——对它抽样是在用误差换本来不需要花的时间。而河牌的样本空间小到枚举更快,抽样只是徒增噪声。
+**Monte Carlo everywhere.** Rejected: preflop is the worst case (five board cards still to come) and yet it is entirely pre-enumerable — sampling it accepts error in exchange for time that never had to be spent. And the river's sample space is small enough that enumeration is faster, so sampling there only adds noise.
 
-**提高迭代次数追求精度。** 否决:蒙特卡洛误差按 1/√n 下降,从 ±1.5% 做到 ±0.15% 要付 **100 倍**时间。而 Bot 的决策阈值本来就带性格偏移和噪声,那种精度它消费不了。
+**Raise the iteration count in pursuit of accuracy.** Rejected: Monte Carlo error falls as 1/√n, so getting from ±1.5% to ±0.15% costs **100×** the time. And a Bot's decision thresholds already carry a personality offset and noise; precision like that is something it cannot consume.
 
-**直接使用 Sklansky-Chubukov 等公开的起手牌强度表。** 否决:那些数字出自受版权保护的书籍,逐项转录等于复制受版权保护的内容;而多个携带该数据的仓库根本没有 LICENSE 文件(即保留一切权利)。我们反正有一个已验证的求值器,自己生成那 169 项就是一个一次性脚本。
+**Use a published starting-hand strength table such as Sklansky-Chubukov.** Rejected: those numbers come from copyrighted books, and transcribing them entry by entry is copying copyrighted material; and several of the repositories carrying that data have no LICENSE file at all (that is, all rights reserved). We have a verified evaluator anyway, so generating those 169 entries ourselves is a one-off script.
 
-**放进 Web Worker。** 否决:7 ms 远在预算内,而 Bot 本来就要 600–1200 ms 的"思考"延迟。为不存在的性能问题引入 Worker 的序列化边界不划算——但异步接口把这扇门留着。
+**Put it in a Web Worker.** Rejected: 7 ms is well inside budget, and a Bot already sits behind a 600–1200 ms "thinking" delay. Taking on a Worker's serialisation boundary for a performance problem that does not exist is a bad trade — but the asynchronous interface leaves that door open.
 
 ## Consequences
 
-蒙特卡洛循环必须**每次迭代零分配**:扁平 `Int32Array` 牌堆、复用的七槽手牌数组、只抽所需张数的部分 Fisher-Yates。实测 0.72 µs/次里,这套纪律占了大半;写成惯用的 `[...deck].sort()` 风格会慢一个数量级。参考实现见 `.scratch/poker-eval-reference/eq2.js`。
+The Monte Carlo loop must allocate **nothing per iteration**: a flat `Int32Array` deck, a reused seven-slot hand array, a partial Fisher-Yates that draws only as many cards as it needs. Most of the measured 0.72 µs per iteration is owed to that discipline; written in the idiomatic `[...deck].sort()` style it is an order of magnitude slower. Reference implementation in `.scratch/poker-eval-reference/eq2.js`.
 
-Bot 不应该直接使用**真实** Equity:对随机手牌的完美 Equity 会让 Bot 跟注过多、显得机械。性格参数施加的噪声同时也让 2000 次抽样的误差变得无害——精度不足在这里不是缺陷,是特性。
+A Bot should not use **true** Equity directly: perfect Equity against a random hand makes a Bot call too often and read as mechanical. The noise the personality parameters impose is also what makes the error of 2000 samples harmless — here, imprecision is not a defect, it is a feature.
 
-所有实测数字来自 Node v26.7 / Apple M3 Pro,**未在真实浏览器中验证过**。V8 与 Chrome 同源,但 Safari/Firefox 是不同引擎,而这段代码高度依赖 typed array。首次跑起来后应当在目标浏览器里量一次。
+Every measured number comes from Node v26.7 / Apple M3 Pro and has **not been verified in a real browser**. V8 is shared with Chrome, but Safari and Firefox are different engines, and this code leans hard on typed arrays. Once it is running for the first time, it should be measured once in the target browsers.
 
-## Correction (v1 实现时发现)
+## Correction (found during the v1 implementation)
 
-上文「河牌:每个对手只剩 C(44,2) = 946 种可能」这个数字是错的,少算了一张牌。
-已知牌是七张——自己两张底牌加五张公共牌——所以未知牌是 **45** 张,
-对手可能的底牌是 **C(45,2) = 990** 种。按 946 枚举会漏掉 44 种。
+The figure above — "River: each opponent has only C(44,2) = 946 possibilities left" — is wrong; it is one card short.
+Seven cards are known — our own two hole cards plus the five on the board — so the unknown cards number **45**,
+and an opponent's possible hole cards number **C(45,2) = 990**. Enumerating on 946 would miss 44 of them.
 
-**决策本身不变**:河牌仍然走精确枚举,990 比 946 也没有贵到需要改主意。
-实现按 990 做,见 `src/poker-math/equity-core.ts`。
+**The decision itself does not change**: the river still goes through exact enumeration, and 990 over 946 is not expensive enough to reconsider.
+The implementation uses 990 — see `src/poker-math/equity-core.ts`.
 
-同时补一条本 ADR 没有说清的边界:**多人河牌不做精确枚举**。
-n 个对手的联合样本空间是 990^n,两人以上就不可行,因此回退到蒙特卡洛,
-并在返回值的 `method` 字段里如实标注为 `monte-carlo` 而不是 `exact-enumeration`。
+And one boundary this ADR left unstated: **a multi-way river is not enumerated exactly**.
+The joint sample space for n opponents is 990^n, infeasible from two opponents up, so it falls back to Monte Carlo
+and says so honestly in the returned `method` field: `monte-carlo`, not `exact-enumeration`.
 
-## Note (v1 实现后)
+## Note (after the v1 implementation)
 
-上文提到的 `.scratch/poker-eval-reference/eq2.js` 已经删除。那套「每次迭代零分配」的写法现在就活在
-`src/poker-math/equity-core.ts` 的 `monteCarloEquity` 里,并且有注释说明为什么必须这么写。
-浏览器实测(Chromium)比 Node 更快:五个 Bot 各算一次合计 6.6 ms,仍在一帧之内。
+The `.scratch/poker-eval-reference/eq2.js` named above has been deleted. That "no allocation per iteration" style now lives in
+`monteCarloEquity` in `src/poker-math/equity-core.ts`, with comments explaining why it has to be written that way.
+Measured in the browser (Chromium) it is faster than Node: one computation each for the five Bots totals 6.6 ms, still inside one frame.

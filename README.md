@@ -1,118 +1,93 @@
 # Texas
 
-网页版单机德州扑克:一名 Player 对五个 Bot,三个 Orbit(十八手 Hand)决出 Score 排名。
-纯前端、无后端、无真钱。术语一律以 [`CONTEXT.md`](CONTEXT.md) 为准。
+A browser-based Texas Hold'em game. You against five Bots, eighteen Hands, one ranking.
 
-## 跑起来
+No backend, no accounts, no real money — open the page and play.
+The interface is in English by default, with Chinese a click away in the corner.
+
+## The game
+
+Six-handed no-limit Hold'em. Blinds are fixed at 2/5, everyone starts with 100 chips,
+and a Session is three Orbits — eighteen Hands — after which the table is ranked on
+net win/loss.
+
+- **Five Bots, five styles** — tight-aggressive, loose-aggressive, calling station,
+  rock, and a bluffer. They are named after real players, and the names are reshuffled
+  every Session, so working out who is tight and who is bluffing has to be done from
+  what you see this Session. You cannot memorise it and carry it into the next one.
+- **Every Hand ends with a Reveal** — all six sets of hole cards turn face up, including
+  everyone who folded on the first round. This is the part worth playing for: you finally
+  find out whether that raise was a bluff.
+- **Hand odds** — when it is your turn, you are shown the probability of finishing with
+  each hand category. The numbers are computed exactly, not estimated.
+- **Bust and you are bought back in automatically.** Nobody is knocked out, so all six
+  Seats stay occupied for all eighteen Hands.
+
+Not in scope: real money, online play, tournaments, solver-grade AI, difficulty
+settings, mobile layouts.
+
+## Running it
+
+Requires Node `^20.19` or `>=22.12`.
 
 ```sh
 npm install
-npm run dev      # 开发服务器
-npm run build    # 生产构建,产物在 dist/
-npm run preview  # 预览生产构建
+npm run dev        # dev server
 ```
-
-## 测试
 
 ```sh
-npm test              # 全部测试,含穷举验证(慢,约 1 分钟)
-npm run test:fast     # 只跑快的那批,开发时用这个
-npm run test:slow     # 只跑慢的那批(穷举求值器、十万手 Hand 属性测试)
-npm run typecheck     # tsc
-npm run check:boundary # 引擎边界检查(见下)
-npm run check:all     # 上面三样一起跑,CI 用这个
+npm run build      # production build, output in dist/
+npm run preview    # preview the production build locally
 ```
 
-慢测试的文件名是 `*.slow.test.ts`,`test:fast` 会跳过它们。它们必须进 CI:
-穷举验证是"自己写求值器"(ADR-0004)这个决定的全部依据,零和属性测试是引擎的主验证手段。
+The build is a set of static files. Drop it on any static host and it runs.
 
-## 目录
+## Developing
 
-| 路径 | 是什么 |
+```sh
+npm run check:all   # types + engine boundary + every test. Run this before committing
+npm run test:fast   # what to run while working — takes seconds
+npm run test:watch  # watch mode
+npm test            # everything, including the exhaustive verification, ~30s
+```
+
+| Path | What it is |
 | --- | --- |
-| `src/poker-math/` | 求值器与 Equity。纯计算,无状态。**引擎侧** |
-| `src/engine/` | 纯状态机:`createSession` / `reduce`。**引擎侧** |
-| `src/bots/` | Bot 决策函数。**引擎侧** |
-| `src/ui/` | React 渲染层。所有中文文案只存在于这里 |
-| `scripts/` | 离线脚本:翻牌前 Equity 表生成、引擎边界检查 |
+| `src/engine/` | The rules engine. A pure state machine |
+| `src/poker-math/` | Hand evaluation, equity, hand odds |
+| `src/bots/` | Bot decision-making |
+| `src/ui/` | The React interface |
+| `scripts/` | Offline scripts: table generation, Bot balance measurement, boundary check |
 
-## 范围
-
-明确**不做**的东西(v1 定下,删掉 spec 后保留在这里,免得有人再提一遍):
-
-真钱、充值、支付;真人对战、联机、房间、匹配;后端、账号、云端存档;
-锦标赛结构(涨盲、淘汰、名次奖励);求解器级 AI(CFR、手牌抽象、对手范围建模);
-复盘建议与决策评分;重放某一 Session;跨 Session 的长期统计;难度选择与阵容自定义;
-移动端与响应式布局;音效;德扑之外的变体与其它下注结构;行动倒计时;中途存档与断线恢复。
-
-其中两条值得说明理由:**不做难度选择**,因为每一档都要调参并验证 Bot 真的变强或变弱,
-而「五种性格各一」本身就保证了每局同时面对紧手、松手、跟注站和诈唬手;
-**不做决策评分**,因为那需要定义「正确打法」,而定义正确就是求解器的问题。
-
-## 引擎边界
-
-ADR-0001 要求引擎侧是零依赖的纯模块。`npm run check:boundary` 是这条约束的自动化守卫,
-它扫描 `src/poker-math`、`src/engine`、`src/bots`,在下列情形下失败:
-
-- import 任何非相对路径的模块(即任何依赖)
-- 相对 import 逃出引擎侧(例如 `../ui/...`)
-- 访问 `window`、`document`、`navigator`、`localStorage` 等 DOM/浏览器 API
-- 使用 `fetch`、`XMLHttpRequest`、`WebSocket`
-- 使用 `setTimeout`、`setInterval`、`requestAnimationFrame` 等计时器——**引擎从不 sleep**
-- 使用 `Math.random`、`Date.now`、`new Date`、`performance.now`、`process.*`
-  ——随机源与时钟必须注入,否则失败的测试无法复现
-
-`scripts/fixtures/engine-boundary-violation/` 里放着六个故意违规的例子,
-`scripts/engine-boundary.test.mjs` 断言检查器确实会抓到它们——守卫本身也要被守卫。
-
-检查跳过 `*.test.*`:测试合法地 import 测试框架,而需要保持纯粹的是会被打包进产物的引擎代码。
-
-## `phe`
-
-`phe` 只是 **dev 依赖**,用于对我们自己的求值器做差分测试(ADR-0004),永远不进运行时。
-`src/types/phe.d.ts` 补上了它缺失的类型声明。`npm run build` 之后 `dist/` 里不含 `phe`。
-
-## 生成的数据表
-
-`src/poker-math/preflop-equity-table.json` 是**生成的数据**,不是转录的。生成方式:
+The two preflop lookup tables are **generated**, not transcribed from anywhere.
+Regenerate them after changing the evaluator:
 
 ```sh
-npm run gen:tables          # 两张表都重算
-npm run gen:preflop-equity  # 845 格,约 118 秒
-npm run gen:preflop-odds    # 169 格穷举,约 48 秒
-npm run measure:bots        # Bot 平衡实测,400 局约 3 秒
+npm run gen:tables    # both tables, ~3 minutes total (needs Node >= 23.6)
+npm run measure:bots  # Bot balance, mandatory after touching personality constants
 ```
 
-**Equity 表**:169 个规范起手牌 × 1–5 名对手,每格用**本项目自己的求值器**跑 200,000 次
-种子化蒙特卡洛,最坏情况 1σ 误差约 0.112%。实测值:AA 单挑 85.09%、KK 单挑 82.39%、
-AKs 单挑 66.81%、AA 六人 49.26%。
+Three conventions worth knowing before you change anything:
 
-**成牌概率表**:169 个起手牌 × 全部 C(50,5) = 2,118,760 种公共牌,**穷举而非抽样**,
-3.58 亿次求值。存的是计数,所以每行之和恒等于 C(50,5)。按发牌频率加权平均可复现随机
-七张牌的公开牌型频次,精确到小数点后三位(见 ADR-0007)。
+1. **The engine side (`engine` / `poker-math` / `bots`) is dependency-free and pure.**
+   It does not touch the DOM, the network or a timer, and it neither generates its own
+   randomness nor reads a clock — both are injected, which is why any Session replays
+   exactly from a seed. `npm run check:boundary` enforces this.
+2. **No user-facing text on the engine side.** The interface is bilingual; every word a
+   player reads lives under `src/ui/text/`. The engine emits structured events and error
+   codes and nothing else.
+3. **Terminology follows [`CONTEXT.md`](CONTEXT.md).** Seat, Stack, Score, Street, Orbit
+   and the rest have precise, non-overlapping meanings here. Don't swap in synonyms.
 
-两张表种子固定,重跑逐字节复现,**没有转录任何出自版权书籍的表格**(ADR-0005)。
+For **why** any of it is built this way, read [`docs/adr/`](docs/adr/): why the hand
+evaluator is written from scratch, why equity is computed three different ways depending
+on the Street, why Bot balance is measured rather than eyeballed, why the interface is
+bilingual. Each one records the options that were rejected and what the decision cost.
 
-## 实测性能
+Conventions for AI agents working in the repo are in [`AGENTS.md`](AGENTS.md).
 
-| | Node v26.7 | 浏览器(Chromium) |
-| --- | --- | --- |
-| 翻牌 2000 次迭代(六人) | 3.45 ms | 1.30 ms |
-| 五个 Bot 各算一次 | 9.36 ms | 6.60 ms |
-| 翻牌前查表 × 1000 | — | 0.00 ms |
-| 河牌精确枚举(990 手) | — | 0.10 ms |
-| `evaluate7` | 约 410 万次/秒 | 约 600 万次/秒 |
-| 穷举全部 133,784,560 手牌 | 24.6 s | — |
-| 十万手 Hand 属性测试 | 4.9 s | — |
+## Licence
 
-浏览器不比 Node 慢,五个 Bot 合计仍在一帧(16.7 ms)之内——spec
-「已知的不确定性」里那条待验证项已经验过了。
-
-## 一处值得记住的更正
-
-河牌的精确枚举是 **C(45,2) = 990**,不是 ADR-0005 原文写的 C(44,2) = 946:
-已知牌是七张(底牌两张 + 公共五张),剩 45 张未知,按 946 枚举会漏掉 44 种可能。
-代码按 990 实现,ADR-0005 末尾有更正说明。
-
-有意思的是 946 确实存在,只是在别处:公共牌是 `9♥10♥J♥Q♥K♥` 时,
-对手的 990 种底牌里恰好有 946 种打平。
+[MIT](LICENSE). The two runtime dependencies, React and React DOM, are MIT as well;
+`phe` is MIT and is a dev dependency only, used to differential-test the hand evaluator
+and never shipped.

@@ -4,17 +4,43 @@ A web-based Texas Hold'em poker game.
 
 ## Conventions
 
-### 语言
+### Language
 
-代码里的标识符、类型名和注释一律用英文,并使用 `CONTEXT.md` 里定下的术语(`Seat`、`Stack`、`Score`、`Street`、`Orbit`…)。
+Identifiers, type names and comments are all in English, and they use the terms fixed in
+`CONTEXT.md` (`Seat`, `Stack`, `Score`, `Street`, `Orbit`…).
 
-面向用户的界面文案是**中文**,只存在于渲染层。这有一个必须遵守的后果:**引擎模块里不允许出现任何用户可见的文案** —— 引擎吐出的是结构化事件和错误码,由渲染层翻译成中文。这条和 ADR-0001(引擎不碰 IO)是同一条约束的两面。
+The user-facing interface is **bilingual**: English and Chinese, switchable at runtime, with
+the choice kept in `localStorage`. **English is the default**; a browser reporting a Chinese
+language gets Chinese (ADR-0008). That has a consequence which is harder than it used to be:
+**no user-visible text is allowed inside the engine modules.** The engine emits structured
+events and error codes, and the render layer turns them into words. A Chinese string smuggled
+into the engine used to be merely untidy; now it is a hole in the English interface. This is
+the same constraint as ADR-0001 (the engine touches no IO) seen from the other side, and
+`npm run check:boundary` guards it.
 
-`all-in` 在界面上保留原文,因为中文译法反而不通用。
+All copy lives under `src/ui/text/`: interface chrome in `ui-strings.ts`, hand names in
+`hand-description.ts`, the action log in `events.ts`, Street and pot names in `labels.ts`.
+**No literal copy in components or screens** — components read it from `useLocale()`, and the
+pure modules take a `Locale` as an explicit argument, which is what keeps them testable
+without React.
 
-**界面上的筹码一律用筹码计数,不用 BB。** BB 是衡量 Bot 强弱的正确单位(不随赌注失真),但对玩家而言它只是同一个数量的第二种说法——「20 BB」和座位上的「100」并排出现,读起来是矛盾而不是补充信息。
+Adding copy means adding it in both languages. `UI_STRINGS` is a `Record<Locale, UiStrings>`,
+so a missing key is a compile error; a missing value, a dropped interpolation argument, or
+Chinese leaking into the English bundle is caught by `src/ui/text/ui-strings.test.ts`. And
+`src/ui/i18n.smoke.test.tsx` actually renders the three screens and asserts there is not one
+Chinese character in the English render.
 
-Bot 在界面上用真实牌手的姓氏(Brunson、Ivey…),性格名(TAG / LAG / Rock…)只存在于代码里——见 `CONTEXT.md`。
+`all-in` stays in English in both languages, because the Chinese rendering is not what anyone
+at a table actually says.
+
+**The interface always shows chip counts, never BB.** BB is the right unit for measuring Bot
+strength — it does not distort when the stakes move — but to a Player it is just a second name
+for a quantity already on screen, and "20 BB" beside a Seat holding 100 reads as a
+contradiction rather than as extra information.
+
+On screen the Bots use the surnames of real players (Brunson, Ivey…), untranslated in both
+languages. The personality names (TAG / LAG / Rock…) exist only in the code — see
+`CONTEXT.md`.
 
 ## Agent skills
 

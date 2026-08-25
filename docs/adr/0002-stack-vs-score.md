@@ -1,17 +1,17 @@
-# Stack 与 Score 是两个不同的概念
+# Stack and Score are two different concepts
 
-排名依据必须是可以为负的累计净胜负(输光的人不该被踢下桌),而下注上限必须是有限的(否则无限注德扑不成立)。把两者压进一个"筹码"数会拆掉游戏本身,所以拆成两个词:**Stack** 是一个 Seat 在当前 Hand 面前的有限筹码,定义 all-in 上限与边池;**Score** 是整个 Session 的累计净输赢,可以为负,是最终排名的唯一依据。Stack 归零时自动 Rebuy,Stack 增加多少,该 Seat 的 Score 就减少多少。
+The ranking has to rest on a cumulative net win/loss that may go negative (a Seat that loses everything should not be kicked off the table), while the ceiling on a bet has to be finite (otherwise No-Limit Hold'em falls apart). Squeezing both into one "chips" number dismantles the game itself, so there are two words instead: **Stack** is the finite chips a Seat has in front of it for the current Hand, and it defines the all-in ceiling and the Side Pots; **Score** is the cumulative net win/loss over the whole Session, may be negative, and is the sole basis for the final ranking. A Stack that reaches zero Rebuys automatically, and whatever the Stack goes up by, that Seat's Score goes down by exactly the same amount.
 
 ## Considered Options
 
-**只保留一个可为负的分数,输光了照打。** 否决,因为它会连锁拆掉三样东西:
+**Keep only one score, let it go negative, and play on after busting.** Rejected, because it takes three things apart in a chain:
 
-1. **all-in 失去定义。** all-in 的意思是"推入我拥有的全部";分数没有下限时"全部"不存在,下注变成无上界。
-2. **边池永不产生。** 边池存在的唯一原因是短码盖不住大注;人人可无限透支,就永远只有一个主池。
-3. **诈唬失去牙齿。** 跟注不再消耗任何有限资源,最优策略退化为"永远跟到摊牌"。
+1. **all-in loses its definition.** all-in means "push in everything I have"; with no floor under the score there is no "everything", and betting has no upper bound.
+2. **Side Pots never form.** The only reason a Side Pot exists is that a short Stack cannot cover a large bet; let everyone overdraw without limit and there is only ever a main pot.
+3. **Bluffing loses its teeth.** Calling no longer consumes any finite resource, and the optimal strategy degenerates into "always call to Showdown".
 
 ## Consequences
 
-六个 Seat 的 Score 之和恒等于零。这是每手 Hand 结束时都可以直接断言的不变量,也是引擎测试最有价值的一条性质。
+The six Seats' Scores sum to zero at every moment. That is an invariant that can be asserted directly at the end of every Hand, and it is the most valuable property in the engine's tests.
 
-Rebuy 不设次数上限,因此没有人会被淘汰离桌:三十手 Hand 里六个座位始终有人。代价是一个反复破产的 Seat 会停在很深的负分上——这是诚实的度量,不是缺陷。
+Rebuys are uncapped, so nobody is ever knocked out and leaves the table: all six Seats have someone in them for all eighteen Hands. The price is that a Seat that goes broke over and over sits on a deeply negative Score — that is an honest measurement, not a defect.

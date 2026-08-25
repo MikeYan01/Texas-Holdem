@@ -1,34 +1,34 @@
-# 自己写 7 张牌求值器,不用现成库
+# The 7-card evaluator is written from scratch, not taken from a library
 
-求值器是引擎的核心:它决定谁赢、谁平分底池,以及界面上"两对,A 带 K"这类文案。我们自己写一个,不引入运行时依赖;`phe` 只作为 **dev 依赖**用于差分测试,发布前移除。
+The evaluator is the core of the engine: it decides who wins, who splits the pot, and what the interface says in lines like "two pair, aces and kings". We write our own and take on no runtime dependency; `phe` is a **dev dependency** only, used for differential testing, and it is removed before release.
 
-决定的依据是实测(Apple M3 Pro / Node v26.7,证据与复现脚本见 `.scratch/poker-eval-reference/`):手写版 **73 行有效代码、gzip 926 B、410 万次/秒**,而 `phe` 是 **68.6 KB gzip**、快 2.3 倍——那 2.3 倍我们用不上,Bot 一次决策只需约 6 万次求值(约 7 ms)。
+The decision rests on measurement (Apple M3 Pro / Node v26.7; evidence and reproduction scripts in `.scratch/poker-eval-reference/`): the hand-written version is **73 significant lines, gzip 926 B, 4.1 million/sec**, while `phe` is **68.6 KB gzip** and 2.3× faster — and that 2.3× is of no use to us: one Bot decision needs only about 60,000 evaluations (about 7 ms).
 
 ## Considered Options
 
-**`phe@0.6.0`。** 最快、体积次优、MIT、已实测可在浏览器运行(打包后屏蔽 `fs`/`path`/`zlib` 仍正常工作)。是个好选择,只是为一个用不上的 2.3 倍付 74 倍体积,且不带 TS 类型、最后发布于 2018 年。
+**`phe@0.6.0`.** The fastest, second smallest, MIT, and measured to run in the browser (still working once bundled with `fs`/`path`/`zlib` stubbed out). A good option, only it pays 74× the size for a 2.3× we cannot use, ships no TS types, and was last published in 2018.
 
-**`poker-evaluator@2.1.1`。** 排除:它在 **模块加载时** `fs.readFileSync` 读取 130 MB 的 Two Plus Two 表,esbuild 直接拒绝打包。它在 Node 里原型跑得好好的,一打包就死——这是最阴险的一类陷阱。
+**`poker-evaluator@2.1.1`.** Ruled out: **at module load** it `fs.readFileSync`s the 130 MB Two Plus Two table, and esbuild flatly refuses to bundle it. The prototype ran perfectly well in Node and died the moment it was bundled — the most insidious class of trap there is.
 
-**`pokersolver@2.1.4`(下载量最高)。** 排除:实测 15 µs/次,2000 次蒙特卡洛 × 6 手牌 ≈ **每个 Bot 180 ms**,一个下注圈接近 1 秒。
+**`pokersolver@2.1.4` (the most downloaded).** Ruled out: measured at 15 µs a call, 2000 Monte Carlo iterations × 6 hands ≈ **180 ms per Bot**, close to 1 second for one Street.
 
-**Two Plus Two 查表法。** 排除,而且理由与直觉相反:那张表 32,487,834 项、124 MiB,brotli 之后仍有 **19 MB**;并且实测比 `phe` **慢 7–8 倍**——124 MB 的表冲垮了每一级缓存。算法作者本人在文档中就预言了这一点。网上流传的 "150 M/s" 出自复用局部查表的嵌套循环基准,真实的 equity 模拟碰不到那种访问模式。
+**The Two Plus Two lookup table.** Ruled out, and for a reason that runs against intuition: the table is 32,487,834 entries and 124 MiB, still **19 MB** after brotli; and it measured **7–8× slower** than `phe` — a 124 MB table blows out every level of cache. The algorithm's own author predicted this in his documentation. The "150 M/s" that circulates online comes from a nested-loop benchmark that reuses partial lookups, and a real Equity simulation never meets that access pattern.
 
 ## Consequences
 
-"自己写有风险"这个通常成立的反对意见在这里被消掉了:穷举 **全部 C(52,7) = 133,784,560 手牌**只需 37 秒,九个牌型的频次与公开值完全一致;再加上与 `phe` 的 30 万次差分排序(0 处分歧)。这套验证比多数库自身的测试更彻底,而且它必须进 CI。
+"Writing your own is risky" — the objection that usually holds — is cancelled here: exhaustive enumeration of **all C(52,7) = 133,784,560 seven-card hands** takes 37 seconds, and the frequencies of the nine hand categories match the published values exactly; on top of that, 300,000 differential comparisons of ordering against `phe` (0 disagreements). This verification is more thorough than most libraries' own tests, and it has to go into CI.
 
-求值器必须返回**单个可比较的整数**(相等即平分底池)。返回"类别 + 单独的踢脚数组"会迫使每个调用点自己写比较逻辑,而分池 bug 正是在那里滋生的。
+The evaluator must return **a single comparable integer** (equal means the pot is split). Returning "a category plus a separate array of Kickers" would force every call site to write its own comparison logic, and that is exactly where pot-splitting bugs breed.
 
-已知实现陷阱,全部已对 `phe` 验证过,必须有对应测试:同花且有顺子 **不等于** 同花顺(必须在同花的那门花色内部找顺子);A-2-3-4-5 轮子需要特判;A 不能回绕(Q K A 2 3 不是顺子);两组三条构成葫芦;七张牌可以有三个对子,而两对的踢脚可能正是第三对的点数;四条的踢脚可能来自一个对子;六张或七张同花要取最大的五张。
+The known implementation traps, every one of them verified against `phe`, every one of them requiring a test: a flush that also contains a straight **is not** a straight flush (the straight has to be found inside the flush's own suit); the A-2-3-4-5 wheel needs a special case; the ace does not wrap (Q K A 2 3 is not a straight); two sets of trips make a full house; seven cards can contain three pairs, and the two-pair Kicker may be the rank of the third pair; the quads Kicker may come from a pair; six or seven cards of a suit means taking the best five.
 
-## Note (v1 实现后)
+## Note (after the v1 implementation)
 
-上文提到的 `.scratch/poker-eval-reference/` 已经删除。那四个调查脚本存在的意义是让这条决定的数字可以被复现,而现在**仓库里有更好的证据,而且它每次 CI 都在跑**:
+The `.scratch/poker-eval-reference/` named above has been deleted. Those four investigation scripts existed so that the numbers in this decision could be reproduced, and now **the repository holds better evidence, and it runs in CI every time**:
 
-- `src/poker-math/evaluate-hand.exhaustive.slow.test.ts` —— 穷举全部 133,784,560 手牌,九个牌型频次与公开值完全一致(约 28 秒)。
-- `src/poker-math/evaluate-hand.differential.test.ts` —— 与 `phe` 做 60 万次排序与平局差分,零分歧。
-- `src/poker-math/evaluate-hand.properties.test.ts` —— 6 万手随机牌验证 `bestFive` 与 `tiebreakersOf`,这两个是穷举与差分都覆盖不到的。
-- `src/poker-math/evaluate-hand.perf.test.ts` —— 只防数量级退化的吞吐基线。
+- `src/poker-math/evaluate-hand.exhaustive.slow.test.ts` — exhaustively enumerates all 133,784,560 seven-card hands; the frequencies of the nine hand categories match the published values exactly (about 28 seconds).
+- `src/poker-math/evaluate-hand.differential.test.ts` — 600,000 differential comparisons of ordering and ties against `phe`, zero disagreements.
+- `src/poker-math/evaluate-hand.properties.test.ts` — 60,000 random hands checking `bestFive` and `tiebreakersOf`, the two things neither the exhaustive nor the differential test reaches.
+- `src/poker-math/evaluate-hand.perf.test.ts` — a throughput baseline that guards against order-of-magnitude regression and nothing else.
 
-一次性脚本被真正的测试取代,是这条决定应有的结局。
+One-off scripts replaced by real tests is the ending this decision deserved.

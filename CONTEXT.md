@@ -1,122 +1,184 @@
 # Texas
 
-一个网页德州扑克游戏:一名 Player 对五个 Bot,十八手牌决出 Score 排名,单机运行,没有真钱。
+A browser-based Texas Hold'em game: one Player against five Bots, eighteen Hands, ranked
+on Score. Runs locally, no real money.
 
 ## Language
 
-### 游戏形态
+The terms below are the project's vocabulary. They are used verbatim in code, in tests and
+in these documents.
+
+The parenthetical after each term is its **Chinese rendering**, kept because the interface
+is bilingual (ADR-0008): it is what `src/ui/text/` must say when the locale is `zh`, so
+this file is the authority for both languages at once. An `_Avoid_` list may therefore
+name words to avoid in either language.
+
+### The variant
 
 **No-Limit Hold'em (NLHE)**:
-本项目唯一的变体与下注结构。无限注意味着任何一次行动都可以推入自己面前的全部筹码。
-_Avoid_: 德扑, poker, Hold'em(单独使用时不明确下注结构)
+The only variant and betting structure in this project. No-limit means any action may push
+a Seat's entire Stack into the middle.
+_Avoid_: poker, Hold'em on its own (neither pins down the betting structure), 德扑
 
-### 牌桌上的角色
+### Who is at the table
 
 **Seat(座位)**:
-牌桌上六个固定位置之一,持有筹码并在轮到时行动。人类和 bot 都占据一个 Seat。
-_Avoid_: position(见下,含义完全不同)、slot
+One of the six fixed places at the table. It holds chips and acts when the action reaches
+it. Humans and Bots alike occupy a Seat.
+_Avoid_: position (see below — it means something entirely different), slot
 
 **Player(玩家)**:
-唯一的人类参与者所占的 Seat。
+The Seat occupied by the one human participant.
 _Avoid_: user, human, hero
 
 **Bot**:
-由固定启发式策略驱动的对手所占的 Seat。它不学习、不训练,只按阈值决策。
-_Avoid_: AI, CPU, opponent, 机器人(与"学习型 AI"混淆)
+A Seat played by an opponent driven by fixed heuristics. It does not learn and it does not
+train; it decides by threshold.
+_Avoid_: AI, CPU, opponent, 机器人 (which suggests a learning AI)
 
-### 牌桌上的几何
+### The geometry of the table
 
 **Button(庄家位)**:
-标记名义庄家的 Seat。每手牌顺时针移动一位,决定盲注归属与行动顺序。
-_Avoid_: dealer(本项目里没有荷官这个角色,发牌是引擎的事)
+The Seat marking the nominal dealer. It moves one Seat clockwise every Hand, and it decides
+who posts the blinds and in what order everyone acts.
+_Avoid_: dealer (there is no dealer role in this project — dealing is the engine's job)
 
 **Position(位置)**:
-一个 Seat 相对 Button 的先后手关系(UTG、CO、BTN、SB、BB 等)。因为 Button 每手牌移动,同一个 Seat 的 Position 每手都在变——Position 不是座位编号。
+Where a Seat stands relative to the Button in the order of action (UTG, CO, BTN, SB, BB and
+so on). Because the Button moves every Hand, a given Seat's Position changes every Hand —
+Position is not a seat number.
 _Avoid_: seat index, 座位号
 
 **Blind(盲注)**:
-每手 Hand 开始前由 Button 左侧两个 Seat 强制投入的筹码:小盲(SB)与大盲(BB)。本项目固定为 **2 / 5**,全程不涨。
+The chips two Seats to the Button's left are forced to put in before each Hand: the small
+blind (SB) and the big blind (BB). Fixed at **2 / 5** here, and they never go up.
 
-BB 还可以当作计量单位(「码量 20 BB」),而且是衡量 Bot 强弱的正确单位——它不随赌注变化而失真,所以 `balance.slow.test.ts` 的边界用它。**但界面上不这么用**:对玩家而言它只是同一笔筹码的第二种说法,和座位上的数字并排出现只会互相矛盾。界面一律显示筹码计数。
-_Avoid_: ante(前注是另一种强制投注,本项目不用)
+BB doubles as a unit of measurement ("a 20 BB Stack"), and it is the right unit for
+measuring Bot strength — it does not distort when the stakes move, which is why
+`balance.slow.test.ts` states its bounds in it. **The interface does not use it that way.**
+To a Player it is just a second name for a quantity already on screen, and putting it beside
+the number on the Seat makes the two read as a contradiction. The interface always shows
+chip counts.
+_Avoid_: ante (a different forced bet, not used here)
 
-### 时间单位
+### Units of time
 
-这四个词在中文里都可能被叫成"一轮",必须严格区分。
+All four of these can be called "一轮" in Chinese, and "a round" in English. They must be
+kept strictly apart.
 
 **Street(下注圈)**:
-一手牌内的一个下注阶段:preflop、flop、turn、river。一手牌恰好有四个。
-_Avoid_: round, 轮, betting round
+One betting stage within a Hand: preflop, flop, turn, river. A Hand has exactly four.
+_Avoid_: round, betting round, 轮
 
 **Hand(一手牌)**:
-从发底牌到摊牌或只剩一人为止的一次完整牌局。
-_Avoid_: round, game, 局, deal
+One complete deal, from the hole cards going out to a showdown or to everyone but one
+folding.
+_Avoid_: round, game, deal, 局
 
 **Orbit(一圈)**:
-Button 绕桌一周所经过的六手牌。它是公平单位——一圈之内每个 Seat 各当过一次 Button、小盲和大盲。
+The six Hands it takes the Button to travel once around the table. It is the unit of
+fairness — within one Orbit every Seat has been the Button, the small blind and the big
+blind exactly once.
 _Avoid_: lap, cycle, 轮
 
 **Session(一局)**:
-本游戏的完整一次游玩:三个 Orbit,即十八手 Hand。结束时按 Score 排名。
+One complete playthrough of this game: three Orbits, so eighteen Hands. It ends with a
+ranking on Score.
 _Avoid_: game, match, tournament, 比赛
 
 **Showdown(摊牌)**:
-一手 Hand 走完 river 且仍有两人以上未弃牌时,这些人亮出底牌比大小的时刻。它是德扑的规则事件,并非每手都会发生——有人下注把所有人赶走时就没有 Showdown。
+The moment, once a Hand has run through the river with two or more Seats still unfolded,
+when those Seats turn their hole cards over and compare. It is a rule of Hold'em and it does
+**not** happen every Hand — a bet that drives everybody out ends the Hand without one.
 _Avoid_: reveal, 亮牌
 
 **Reveal(复盘亮牌)**:
-本游戏额外加的环节:每手 Hand 结束后**无条件**展开所有 Seat 的底牌,**包括早已弃牌的人**。它与 Showdown 不是一回事——Showdown 是牌局规则,Reveal 是给 Player 看的学习工具,发生在牌局已经结算之后。
+This game's own addition: after every Hand, **unconditionally**, every Seat's hole cards are
+turned face up, **including those of everyone who already folded**. It is not a Showdown.
+A Showdown is a rule of the game; a Reveal is a learning tool for the Player, and it happens
+after the Hand has already been settled.
 _Avoid_: showdown, 摊牌
 
-### 计分
+### Scoring
 
 **Stack(码量)**:
-一个 Seat 在**当前 Hand** 面前的筹码,**有限**。它定义了 all-in 的上限,也是边池存在的唯一原因。
-_Avoid_: chips, balance, 筹码(单独使用时与 Score 混淆)
+The chips a Seat has in front of it for the **current Hand**. **Bounded.** It is what makes
+all-in mean something, and it is the only reason side pots exist.
+_Avoid_: chips, balance, 筹码 on its own (which blurs into Score)
 
 **Side Pot(边池)**:
-当一个 Seat all-in 但 Stack 盖不住其他人的下注时,超出的部分单独形成的池子。原 all-in 者无权争夺它。一手 Hand 里可以同时存在多个边池,这是六人桌最容易实现错的地方。
-_Avoid_: split pot(平分底池是另一回事,指摊牌打平)
+When a Seat is all-in but its Stack cannot cover what others have bet, the excess forms a
+pot of its own. The all-in Seat has no claim on it. A single Hand can hold several side pots
+at once, and this is the easiest thing on a six-handed table to get wrong.
+_Avoid_: split pot (that is a tie at showdown, a different thing)
 
 **Score(净胜负)**:
-一个 Seat 在**整个 Session** 内累计的净输赢,可以为负。它是最终排名的唯一依据。任何时刻六个 Score 之和恒为零。
-_Avoid_: points, chips, balance, 分数(单独使用时与 Stack 混淆)
+A Seat's cumulative net win/loss across the **whole Session**. May be negative. It is the
+sole basis for the final ranking. At every moment the six Scores sum to zero.
+_Avoid_: points, chips, balance, 分数 on its own (which blurs into Stack)
 
 **Rebuy(补码)**:
-Stack 归零后自动补回起始 Stack 的动作。Stack 增加多少,该 Seat 的 Score 就减少多少,因此零和成立。次数不设上限,没有人会被淘汰离桌。
+Automatically buying back in to the starting Stack once a Stack hits zero. The Stack goes up
+and that Seat's Score goes down by exactly the same amount, which is what keeps the sum at
+zero. There is no limit on how many times, and nobody is ever knocked out of the game.
 _Avoid_: reload, top-up, respawn
 
 **Equity(胜率)**:
-在当前底牌与已知公共牌之下,赢得这手 Hand 的概率。**只有 Bot 用它决策,界面上不显示**——给 Player 看的是 Hand Odds(见下),因为"我会做成什么牌"比一个孤零零的百分比更能建立直觉。
-_Avoid_: odds(赔率是另一回事)、win rate、胜算
+The probability of winning the current Hand, given the hole cards and the community cards
+known so far. **Only Bots use it, and it is never displayed.** What the Player is shown is
+Hand Odds (below), because "what am I going to make" builds intuition better than a lone
+percentage.
+_Avoid_: odds (a different thing), win rate, 胜算
 
 **Pot Odds(底池赔率)**:
-跟注在数学上划算所需的最低 Equity,等于 跟注额 ÷ (底池 + 跟注额)。Bot 把 Equity 与它相比,决定弃牌、跟注还是加注。
-_Avoid_: odds, 赔率(单独使用时不指明是哪一侧)
+The minimum Equity that makes calling mathematically worthwhile: the call divided by
+(pot + call). A Bot compares its Equity against this to decide whether to fold, call or
+raise.
+_Avoid_: odds, 赔率 on its own (it does not say which side you are on)
 
 **Kicker(踢脚)**:
-牌型相同时用来分高下的闲牌。两人同为一对 A,就比各自的踢脚;踢脚也相同才平分底池。界面上的牌型文案会把它写出来(「两对,A 和 K,踢脚 Q」),因为它经常就是决定这手牌归谁的那张。
-_Avoid_: 副牌, side card, 单张
+The spare card that separates two hands of the same category. Two Seats each holding a pair
+of aces are separated by their kickers; if those match too, they split the pot. The
+interface spells it out ("two pair, aces and kings, kicker Q"), because it is very often the
+thing that decides who takes the Hand.
+_Avoid_: side card, 副牌, 单张
 
 **Hand Odds(成牌概率)**:
-在当前底牌与已知公共牌之下,最终会做成每种牌型的概率分布。它与 Equity 是两个问题:Equity 问"我会不会赢",所以必须把对手算进去;Hand Odds 只问"我最后会拿到什么",与对手完全无关,因此可以精确算出——翻牌前查一张穷举过的表,之后逐一枚举剩余的发牌。界面上只显示概率最高的五种。
-_Avoid_: Equity, 胜率(那是赢的概率,不是成牌的概率)
+The probability distribution over which hand category a Seat will finish with, given its
+hole cards and the community cards so far. It is a different question from Equity: Equity
+asks "am I going to win", so it has to account for opponents; Hand Odds only asks "what am I
+going to end up holding", which is opponent-independent and therefore computable exactly —
+preflop from an exhaustively enumerated table, and after that by counting every remaining
+run-out. The interface shows only the five likeliest.
+_Avoid_: Equity, 胜率 (that is the probability of winning, not of making a hand)
 
-### Bot 的五种性格
+### The five Bot personalities
 
-五个 Bot 共用一套策略,只是阈值参数不同。两个维度:**松/紧**指玩多少起手牌,**被动/激进**指倾向跟注还是加注。
+All five Bots share one strategy and differ only in threshold parameters. Two dimensions:
+**loose/tight** is how many starting hands they play, **passive/aggressive** is whether they
+lean towards calling or raising.
 
-**TAG**:紧且激进。玩的手少,但一旦入池就主动下注。
+**TAG**: tight and aggressive. Plays few hands, but bets them when it does.
 
-**LAG**:松且激进。入池范围宽,施压频繁。
+**LAG**: loose and aggressive. Enters pots widely and applies pressure often.
 
-**Calling Station(跟注站)**:松且被动。什么牌都想看,但极少主动加注。
+**Calling Station(跟注站)**: loose and passive. Wants to see everything, almost never raises.
 
-**Rock(岩石)**:紧且被动。只玩最强的起手牌,几乎从不诈唬。
+**Rock(岩石)**: tight and passive. Plays only the strongest starting hands and hardly ever
+bluffs.
 
-**Bluffer(诈唬手)**:下注与加注远多于牌力所能支撑的程度,但**不为此付钱**——它跟注的门槛比谁都高。它的作用是制造噪声,逼迫对"这是不是诈唬"的判断;而它不跟注亏本牌,是它和一台提款机的区别。
-_Avoid_: Maniac(前身,阈值低于底池赔率,每次跟注都是 -EV,每手向全桌输 5 BB)
+**Bluffer(诈唬手)**: bets and raises far more than its cards can support, but **does not pay
+for it** — its calling threshold is the highest at the table. Its job is to generate noise
+and force the question "is this a bluff?", and the fact that it will not call off losing
+hands is what separates it from a cash machine.
+_Avoid_: Maniac (its predecessor, whose threshold sat below the Pot Odds, making every call
+-EV and losing 5 BB per Hand to the rest of the table)
 
-### Bot 的显示名
+### The Bots' display names
 
-界面上五个 Bot 用的是**真实牌手的姓氏**(Brunson、Ivey、Negreanu、Dwan、Hellmuth),而且**名字与性格无关、每局重新打乱**。两个理由:一是"跟注站"是输钱打法,把它按在一个真人头上既不礼貌也不属实;二是认出谁紧谁松本来就是这张桌子上最值得学的东西,名字要是固定绑定性格,打两局就白送了。
+The five Bots are labelled with the **surnames of real players** (Brunson, Ivey, Negreanu,
+Dwan, Hellmuth), and the names are **unrelated to personality and reshuffled every Session**.
+Two reasons. First, "Calling Station" is a losing style, and pinning it on a real person is
+both impolite and untrue. Second, working out who is tight and who is loose is the most
+valuable thing there is to learn at this table — bind a name to a personality and you have
+given it away after two Sessions.

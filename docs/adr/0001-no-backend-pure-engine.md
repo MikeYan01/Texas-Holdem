@@ -1,13 +1,13 @@
-# 纯前端,无后端;规则引擎与渲染彻底分离
+# Pure front-end, no backend; the rules engine is completely separate from rendering
 
-本游戏是单机的:一名人类对五个由固定启发式驱动的 Bot,虚拟计分,不存在真人对手。因此整个游戏作为静态站点运行在浏览器内,没有服务端、没有账号、没有网络协议。作为一条硬约束,规则引擎必须是一个零依赖的纯 TypeScript 模块:不 import 任何 UI 框架、不访问 DOM、不访问 `window`、不发起网络请求。React 只订阅引擎吐出的状态。
+This game is standalone: one Player against five Bots driven by fixed heuristics, virtual scoring, no human opponent. So the whole game runs inside the browser as a static site — no server, no accounts, no network protocol. As a hard constraint, the rules engine must be a zero-dependency pure TypeScript module: it imports no UI framework, touches no DOM, touches no `window`, makes no network requests. React only subscribes to the state the engine emits.
 
 ## Considered Options
 
-**一个薄的 Node 后端持有牌堆。** 否决:在没有对手可被欺骗的前提下,它只增加部署、状态同步和延迟成本,不换来任何东西。
+**A thin Node backend holding the deck.** Rejected: when there is no opponent who could be cheated, it adds deployment, state-synchronisation and latency costs and buys nothing in return.
 
 ## Consequences
 
-牌堆与所有 Bot 的底牌都在客户端内存中,打开 devtools 即可看到。在单机局里这个代价为零,但它意味着这套代码在任何**有真人对手**的场景下都是不安全的。引擎的纯粹性正是为此留的门:将来要加真人对战,做法是把同一个引擎模块原样搬到 Node 上充当权威状态机,而不是重写。
+The deck and every Bot's hole cards live in client memory; open devtools and you can see them. In a standalone Session that costs nothing, but it means this code is unsafe in any setting that has **a human opponent**. The engine's purity is the door left open for exactly that: if play against real people is added later, the way to do it is to lift the same engine module onto Node as-is and let it be the authoritative state machine, not to rewrite it.
 
-引擎不碰 IO 还有一个当下就能兑现的好处:它可以在 Node 里被大批量测试——跑十万手 Hand 验证零和不变量,不需要浏览器。
+Keeping IO out of the engine buys something today as well: it can be tested in bulk under Node — a hundred thousand Hands to verify the zero-sum invariant, no browser needed.

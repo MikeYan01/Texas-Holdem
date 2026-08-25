@@ -1,15 +1,15 @@
-# Bot 用底池赔率决策,不做求解器
+# Bots decide with Pot Odds, not with a solver
 
-Bot 的决策规则是:估出当前 Equity,与 Pot Odds(跟注额 ÷ (底池 + 跟注额))相比——低于则弃牌,高于则跟注,大幅高于则加注。五种性格是加在这个比较上的常数偏移(门槛高低、升级为加注所需的余量、翻牌前入池范围宽窄),而不是五套独立逻辑。
+A Bot's decision rule is: estimate the current Equity and compare it against the Pot Odds (call ÷ (pot + call)) — below it, fold; above it, call; far above it, raise. The five personalities are constant offsets on that one comparison (how high the threshold sits, how much margin it takes to escalate to a raise, how wide the preflop entry range is), not five separate pieces of logic.
 
 ## Considered Options
 
-**绝对胜率阈值**,例如"低于 40% 就弃牌"。否决:它忽略底池大小。当底池已有 100、跟注只需 2 时,只要约 2% 的 Equity 就该跟,而绝对阈值会把这个池子扔掉。这类错误对人类玩家是**立刻可见**的,几手牌之内就会让 Bot 显得愚蠢。
+**An absolute Equity threshold**, say "fold below 40%". Rejected: it ignores the size of the pot. With 100 already in the pot and only 2 to call, about 2% Equity is enough to make calling correct, and an absolute threshold throws that pot away. Mistakes of this kind are **immediately visible** to a Player, and within a few Hands they make the Bot look stupid.
 
-**基于求解器的近似 GTO 策略**(CFR、手牌抽象、对手范围建模)。否决:那是研究级工程,会吞掉整个项目。本项目要的是一局好玩的单机牌局,不是一个强 AI。
+**A solver-based approximate GTO strategy** (CFR, hand abstraction, opponent range modelling). Rejected: that is research-grade engineering and it would swallow the whole project. What this project wants is one fun standalone Session, not a strong AI.
 
 ## Consequences
 
-Bot 在**跟注**这一侧是理性的,但它的**下注尺寸**与**诈唬频率**只由性格常数驱动,没有任何博弈论依据。它们会打得像一个懂基本赔率的业余玩家——这正是本项目想要的对手。
+A Bot is rational on the **calling** side, but its **bet sizing** and its **bluff frequency** are driven by personality constants alone, with no game-theoretic basis at all. They play like an amateur who knows basic odds — which is exactly the opponent this project wants.
 
-不要把这当成缺陷去"修":修好它等于把项目重做成求解器,那是 ADR 里被明确否决的那条路。
+Do not treat this as a defect and "fix" it: fixing it means rebuilding the project into a solver, and that is the road this ADR explicitly rejects.
