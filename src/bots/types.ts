@@ -84,6 +84,16 @@ export type BotView = {
   readonly opponentCount: number;
   readonly currentBet: number;
   readonly stack: number;
+  /**
+   * This Seat led the betting on the Street that just finished. Public
+   * information: every Seat at the table watched it happen.
+   *
+   * What it buys is a bluff that remembers. Re-rolled from scratch every Street,
+   * a bluff is not a story but a sequence of coin flips — and the give-up is a
+   * perfect tell, because a flop bluffer checked the turn 58.8% of the time
+   * against 15.0% for a flop value-bettor.
+   */
+  readonly wasAggressor: boolean;
   readonly bigBlind: number;
   readonly legalActions: LegalActions;
 };

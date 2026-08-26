@@ -499,6 +499,70 @@ describe('a strong draw is worth firing at', () => {
   });
 });
 
+describe('a bluff that remembers the Street before', () => {
+  /** A Seat on the turn, first to act into an unopened pot. */
+  const onTheTurn = (options: { hole: string; board: string; led: boolean }) => {
+    const state = positionAt({
+      seats: [
+        { stack: 200, hole: options.hole, streetCommitted: 0, committed: 40 },
+        { stack: 200, hole: '2c 3d', streetCommitted: 0, committed: 40 },
+      ],
+      street: 'turn',
+      board: options.board,
+      currentBet: 0,
+      lastStreetAggressor: options.led ? 0 : 1,
+      actorSeat: 0,
+    });
+    return makeBotView(state, 0);
+  };
+
+  const firesWithNothing = (view: BotView, key: PersonalityKey): number => {
+    let fired = 0;
+    for (let seed = 0; seed < 600; seed++) {
+      // 6% Equity: the raising standard is nowhere near met, so anything that
+      // goes in is the bluff roll and nothing else.
+      const action = decideWithEquity(view, PERSONALITIES[key], 0.06, seededRng(seed));
+      if (action.type !== 'check') fired += 1;
+    }
+    return fired / 600;
+  };
+
+  it('knows whether it was the Seat that led, and nothing more', () => {
+    expect(onTheTurn({ hole: 'Qh 4d', board: '9c 7s 2h Td', led: true }).wasAggressor).toBe(true);
+    expect(onTheTurn({ hole: 'Qh 4d', board: '9c 7s 2h Td', led: false }).wasAggressor).toBe(false);
+  });
+
+  it('fires the turn more often when it fired the flop', () => {
+    // Measured before this existed, the memorylessness was exact: for every
+    // personality, the chance of bluffing the turn was the same whether or not it
+    // had bluffed the flop, and 0.19 two-barrel stories happened per Session.
+    for (const key of PERSONALITY_KEYS) {
+      if (PERSONALITIES[key].bluffFrequency < 0.05) continue; // too rare to measure
+      const board = '9c 7s 2h Td';
+      const led = firesWithNothing(onTheTurn({ hole: 'Qh 4d', board, led: true }), key);
+      const didNot = firesWithNothing(onTheTurn({ hole: 'Qh 4d', board, led: false }), key);
+      expect(led, `${key} continued no more often than it opened`).toBeGreaterThan(didNot);
+    }
+  });
+
+  it('fires harder still when the Hand can still get there', () => {
+    // A live flush draw against a busted one, both continuing. This is what stops
+    // the give-up being a confession: the Player cannot see which just checked.
+    const live = onTheTurn({ hole: 'Ah 7h', board: 'Kh 4h 2c Td', led: true });
+    const dead = onTheTurn({ hole: 'Qh 4d', board: '9c 7s 2h Td', led: true });
+    expect(firesWithNothing(live, 'LAG')).toBeGreaterThan(firesWithNothing(dead, 'LAG'));
+  });
+
+  it('does not lean on a story it never started', () => {
+    // Upside alone must not continue anything for a Seat that checked the flop,
+    // or the record would be decoration.
+    const board = 'Kh 4h 2c Td';
+    expect(firesWithNothing(onTheTurn({ hole: 'Ah 7h', board, led: false }), 'LAG')).toBeLessThan(
+      firesWithNothing(onTheTurn({ hole: 'Ah 7h', board, led: true }), 'LAG'),
+    );
+  });
+});
+
 describe('bet sizing', () => {
   it('varies rather than repeating one number', () => {
     const view = viewFacing({ potTotal: 60, callAmount: 0 });
@@ -701,6 +765,7 @@ describe('a Bot cannot see what it should not', () => {
       'opponentCount',
       'currentBet',
       'stack',
+      'wasAggressor',
       'bigBlind',
       'legalActions',
     ]);

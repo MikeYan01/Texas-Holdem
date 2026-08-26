@@ -257,6 +257,20 @@ export type SessionState = {
   readonly actorSeat: number | null;
   /** Highest `streetCommitted` on the current Street. */
   readonly currentBet: number;
+  /**
+   * The Seat that last bet, raised or pushed on the current Street, or null if
+   * nobody has yet. Reset when a Street is dealt, and **not** cleared by a fold.
+   *
+   * This is the whole of the engine's memory of what has been done, and
+   * deliberately so: a full action history is generality nothing needs. What it
+   * buys is a bluff that can be a story rather than an isolated coin flip.
+   */
+  readonly streetAggressor: number | null;
+  /**
+   * The same, for the Street that has just finished. A Bot reads its own entry
+   * here to decide whether to keep telling the story it started.
+   */
+  readonly lastStreetAggressor: number | null;
   /** Size of the last full raise; the floor for the next one. */
   readonly lastRaiseSize: number;
   /** Main pot first, then side pots. Derived from commitments after every step. */

@@ -27,6 +27,7 @@ export function makeBotView(state: SessionState, seatIndex: number): BotView {
     opponentCount: state.seats.filter((other) => !other.folded && other.index !== seatIndex).length,
     currentBet: state.currentBet,
     stack: seat.stack,
+    wasAggressor: state.lastStreetAggressor === seatIndex,
     bigBlind: state.config.bigBlind,
     legalActions: state.legalActions,
   };

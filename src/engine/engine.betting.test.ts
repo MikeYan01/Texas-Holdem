@@ -512,3 +512,105 @@ describe('the engine never sleeps', () => {
     expect(state.phase).toBe('awaiting-action');
   });
 });
+
+describe('the aggressor record', () => {
+  /** Three Seats on the flop, nothing bet yet. */
+  const flop = (): SessionState =>
+    positionAt({
+      seats: [
+        { stack: 200, hole: 'Ah Kd' },
+        { stack: 200, hole: '2c 3d' },
+        { stack: 200, hole: '5c 6d' },
+      ],
+      street: 'flop',
+      board: '2h 7s 9c',
+      currentBet: 0,
+      lastRaiseSize: BB,
+      actorSeat: 0,
+    });
+
+  it('starts a Street with nobody having led', () => {
+    expect(flop().streetAggressor).toBeNull();
+    expect(advance(createSession({ seed: 3 })).streetAggressor).toBeNull();
+  });
+
+  it('is set by a bet, and moved along by a raise', () => {
+    let state = act(flop(), { type: 'bet', to: 20 });
+    expect(state.streetAggressor).toBe(0);
+    state = act(state, { type: 'raise', to: 60 });
+    expect(state.streetAggressor).toBe(1);
+  });
+
+  it('is set by an all-in that lifts the bet', () => {
+    const state = act(
+      positionAt({
+        seats: [
+          { stack: 40, hole: 'Ah Kd' },
+          { stack: 200, hole: '2c 3d' },
+        ],
+        street: 'flop',
+        board: '2h 7s 9c',
+        currentBet: 0,
+        actorSeat: 0,
+      }),
+      { type: 'all-in' },
+    );
+    expect(state.streetAggressor).toBe(0);
+  });
+
+  it('is not taken by an all-in that is really a call', () => {
+    // A Seat pushing its last chips in for less than the current bet has called,
+    // not led. Recording it as the aggressor would take the record off the Seat
+    // that actually led, and that Seat would then give up its own story.
+    let state = positionAt({
+      seats: [
+        { stack: 200, hole: 'Ah Kd' },
+        { stack: 15, hole: '2c 3d' },
+        { stack: 200, hole: '5c 6d' },
+      ],
+      street: 'flop',
+      board: '2h 7s 9c',
+      currentBet: 0,
+      lastRaiseSize: BB,
+      actorSeat: 0,
+    });
+    state = act(state, { type: 'bet', to: 40 });
+    expect(state.streetAggressor).toBe(0);
+    state = act(state, { type: 'all-in' });
+    expect(state.streetAggressor).toBe(0);
+  });
+
+  it('is not cleared by a fold', () => {
+    let state = act(flop(), { type: 'bet', to: 20 });
+    state = act(state, { type: 'fold' });
+    expect(state.streetAggressor).toBe(0);
+  });
+
+  it('hands the Street over when the next one is dealt', () => {
+    let state = act(flop(), { type: 'bet', to: 20 });
+    state = act(state, { type: 'call' });
+    state = act(state, { type: 'call' });
+    state = advance(state); // the turn
+    expect(state.street).toBe('turn');
+    expect(state.lastStreetAggressor).toBe(0);
+    expect(state.streetAggressor).toBeNull();
+  });
+
+  it('forgets both when a new Hand starts', () => {
+    let state = createSession({ seed: 11 });
+    state = run(advance(state), alwaysCall, (s) => s.phase === 'hand-complete');
+    state = advance(state);
+    expect(state.streetAggressor).toBeNull();
+    expect(state.lastStreetAggressor).toBeNull();
+  });
+
+  it('records no more than that — there is no action history to read', () => {
+    // Deliberately not a log. Which Seat led each Street is all any Bot needs,
+    // and everything beyond it is generality nothing has asked for.
+    let state = act(flop(), { type: 'bet', to: 20 });
+    state = act(state, { type: 'raise', to: 60 });
+    state = act(state, { type: 'fold' });
+    const keys = Object.keys(state).filter((key) => /aggress|history|log/i.test(key));
+    expect(keys).toEqual(['streetAggressor', 'lastStreetAggressor']);
+  });
+});

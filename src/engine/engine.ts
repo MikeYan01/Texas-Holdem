@@ -88,6 +88,8 @@ export function createSession(options: CreateSessionOptions): SessionState {
     dealtCount: 0,
     actorSeat: null,
     currentBet: 0,
+    streetAggressor: null,
+    lastStreetAggressor: null,
     lastRaiseSize: config.bigBlind,
     pots: [],
     revealedSeats: [],
@@ -200,6 +202,8 @@ function startHand(draft: Draft): void {
   draft.dealtCount = 0;
   draft.revealedSeats = [];
   draft.currentBet = bigBlind;
+  draft.streetAggressor = null;
+  draft.lastStreetAggressor = null;
   draft.lastRaiseSize = bigBlind;
 
   for (const seat of draft.seats) {
@@ -277,6 +281,10 @@ function dealNextStreet(draft: Draft): void {
   }
   draft.currentBet = 0;
   draft.lastRaiseSize = draft.config.bigBlind;
+  // The Street that just ended keeps its aggressor, so a Bot can tell whether the
+  // story it is about to continue is one it started.
+  draft.lastStreetAggressor = draft.streetAggressor;
+  draft.streetAggressor = null;
 
   openBettingRound(draft, orderFromButton(draft)[0]!);
 }
@@ -562,6 +570,10 @@ function applyAggression(
   patchSeat(draft, index, { hasActed: true, facedBet: to });
 
   draft.currentBet = to;
+  // The betting lead, and only the lead. A Seat pushing its last chips in for
+  // less than the current bet has called, not led, and must not take the record
+  // off the Seat that actually did — or that Seat would give up its own story.
+  draft.streetAggressor = index;
   if (isFullRaise) draft.lastRaiseSize = raiseSize;
 
   // Everyone still able to act owes an action again, even against an under-sized

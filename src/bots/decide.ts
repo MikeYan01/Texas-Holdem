@@ -75,6 +75,29 @@ export function callThresholdFor(odds: number, margin: number): number {
 export const A_NEAR_CERTAIN_WINNER = 0.85;
 
 /**
+ * How much harder a Bot that led the last Street leans on the bluff roll this
+ * Street.
+ *
+ * Measured before this existed, the memorylessness was exact: for every
+ * personality, the chance of bluffing the turn was the same whether or not it had
+ * bluffed the flop. Worse than the same, in fact — a flop bluffer continued
+ * *less* often than an average Bot, because the value-betting half of the rule
+ * was now pulling against it. The result was 0.19 two-barrel stories per Session.
+ */
+const LED_LAST_STREET = 2.5;
+
+/**
+ * And how much harder again per unit of Upside still in the Hand.
+ *
+ * Both terms are needed. Upside alone continues nothing, because a Bot bluffing
+ * the flop has by construction almost none — a Hand with real Upside clears the
+ * raising standard and is a value raise, not a bluff. Upside alone is what makes
+ * a Bot with a live draw fire harder than one drawing dead, so the give-up is not
+ * a confession: the Player cannot see which of the two just checked.
+ */
+const KEEPS_TELLING_THE_STORY = 4;
+
+/**
  * How much Equity a raise asks for after the flop: an even share of the pot plus
  * this personality's margin, capped so it can never demand a near-lock.
  *
@@ -232,7 +255,14 @@ export function explainDecision(
   // A bluff only pays when everybody folds, so its value falls away as the
   // table grows. Firing into five opponents as often as into one is the
   // difference between an aggressive style and a losing one.
-  const bluffing = rng() < personality.bluffFrequency / view.opponentCount;
+  //
+  // A Bot that led last Street leans on the roll again, in proportion to the
+  // Upside still in its Hand. That is what turns a bluff into a story: it keeps
+  // firing while the Hand can still get there, and gives up when it cannot — so
+  // the give-up stops being a confession, because the Player cannot see which
+  // happened.
+  const continuation = view.wasAggressor ? LED_LAST_STREET + KEEPS_TELLING_THE_STORY * handUpside : 0;
+  const bluffing = rng() < (personality.bluffFrequency * (1 + continuation)) / view.opponentCount;
   // "Bet" and "raise" are the same decision to a Bot; which word the engine wants
   // depends only on whether anything has been bet yet. Checking `canBet` alone
   // would silently skip the one spot where checking and raising are both legal —

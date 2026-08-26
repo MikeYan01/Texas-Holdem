@@ -39,6 +39,8 @@ export type PositionSpec = {
   readonly board?: string;
   readonly actorSeat?: number | null;
   readonly currentBet?: number;
+  readonly streetAggressor?: number | null;
+  readonly lastStreetAggressor?: number | null;
   readonly lastRaiseSize?: number;
   readonly phase?: SessionPhase;
   readonly deck?: string;
@@ -100,6 +102,8 @@ export function positionAt(spec: PositionSpec): SessionState {
     dealtCount: 0,
     actorSeat,
     currentBet,
+    streetAggressor: spec.streetAggressor ?? null,
+    lastStreetAggressor: spec.lastStreetAggressor ?? null,
     lastRaiseSize,
     pots: buildPots(seats),
     revealedSeats: [...(spec.revealedSeats ?? [])],
