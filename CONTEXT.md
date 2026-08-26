@@ -185,18 +185,24 @@ _Avoid_: potential, 潜力 (too vague), draw equity, 听牌率 (which names only
 
 ### The five Bot personalities
 
-All five Bots share one strategy and differ only in threshold parameters. Two dimensions:
-**loose/tight** is how many starting hands they play, **passive/aggressive** is whether they
-lean towards calling or raising.
+All five Bots share one strategy and differ only in constants on it. There is no branch
+anywhere on which Bot is deciding. Two dimensions name them: **loose/tight** is how many
+starting hands they play, **passive/aggressive** is whether they lean towards calling or
+raising — which before the flop is their Opening Range, and after it how much Equity above
+an even share of the pot they want. Two further constants say how far a polarised Hand
+pulls that threshold down, and how readily they will gamble a short Stack.
 
 **TAG**: tight and aggressive. Plays few hands, but bets them when it does.
 
 **LAG**: loose and aggressive. Enters pots widely and applies pressure often.
 
 **Calling Station(跟注站)**: loose and passive. Wants to see everything, almost never raises.
+It can nonetheless make a large bet — it used to be incapable of one, which read as the
+opposite of what it is, because a Bot that never fires big is a Bot you can always fold to.
 
-**Rock(岩石)**: tight and passive. Plays only the strongest starting hands and hardly ever
-bluffs.
+**Rock(岩石)**: tight and passive. Plays only the strongest starting hands and bluffs rarely
+— but not never, and never with only the nuts. A Bot whose big bets are always the nuts is
+read dead inside two Sessions, and then it can never be paid off again.
 
 **Bluffer(诈唬手)**: bets and raises far more than its cards can support, but **does not pay
 for it** — its calling threshold is the highest at the table. Its job is to generate noise

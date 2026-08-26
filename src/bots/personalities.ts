@@ -32,7 +32,7 @@ export const PERSONALITIES: Record<PersonalityKey, Personality> = {
     semiBluffAppetite: 0.5,
     gambleAppetite: 1.6,
     equityNoise: 0.09,
-    bluffFrequency: 0.26,
+    bluffFrequency: 0.23,
     betSizing: { min: 0.45, max: 1.1 },
   },
   // Loose and passive: wants to see everything, almost never raises.
@@ -46,7 +46,7 @@ export const PERSONALITIES: Record<PersonalityKey, Personality> = {
     gambleAppetite: 0.15,
     equityNoise: 0.07,
     bluffFrequency: 0.01,
-    betSizing: { min: 0.3, max: 0.5 },
+    betSizing: { min: 0.35, max: 0.8 },
   },
   // Tight and passive: only the strongest hands, and it hardly ever bluffs.
   Rock: {
@@ -58,8 +58,8 @@ export const PERSONALITIES: Record<PersonalityKey, Personality> = {
     semiBluffAppetite: 0.15,
     gambleAppetite: 0,
     equityNoise: 0.03,
-    bluffFrequency: 0.02,
-    betSizing: { min: 0.4, max: 0.65 },
+    bluffFrequency: 0.07,
+    betSizing: { min: 0.45, max: 0.8 },
   },
   // Bets and raises far more than its cards justify, but does not pay off when
   // it misses. Its job is the one the table would otherwise lack: without
@@ -78,7 +78,7 @@ export const PERSONALITIES: Record<PersonalityKey, Personality> = {
     semiBluffAppetite: 0.6,
     gambleAppetite: 2.0,
     equityNoise: 0.11,
-    bluffFrequency: 0.3,
+    bluffFrequency: 0.36,
     betSizing: { min: 0.55, max: 1.2 },
   },
 };

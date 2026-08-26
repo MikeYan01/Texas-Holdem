@@ -500,7 +500,13 @@ describe('a strong draw is worth firing at', () => {
 });
 
 describe('a bluff that remembers the Street before', () => {
-  /** A Seat on the turn, first to act into an unopened pot. */
+  /**
+   * A Seat on the turn, first to act into an unopened pot.
+   *
+   * First to act on purpose: acting last is its own reason to bluff, and two
+   * reasons together reach the ceiling that stops any Bot becoming certain to
+   * fire. Isolating the continuation keeps this measuring one thing.
+   */
   const onTheTurn = (options: { hole: string; board: string; led: boolean }) => {
     const state = positionAt({
       seats: [
@@ -510,6 +516,7 @@ describe('a bluff that remembers the Street before', () => {
       street: 'turn',
       board: options.board,
       currentBet: 0,
+      buttonSeat: 1,
       lastStreetAggressor: options.led ? 0 : 1,
       actorSeat: 0,
     });

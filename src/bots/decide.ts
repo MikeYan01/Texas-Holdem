@@ -465,8 +465,12 @@ type SizedAggression = {
  * of all all-ins came from Stacks under 10 BB, which were only 10% of decisions.
  * Those pushes were not gambles. Mean true Equity behind them was 68.8%; the Bot
  * wanted to bet big and had no chips with which to do it.
+ *
+ * Under half, so there is always something behind. Measured at recalibration,
+ * moving it from 0.6 to here cost nothing visible and took a fifth off the
+ * all-ins.
  */
-const MOST_OF_A_STACK = 0.6;
+const MOST_OF_A_STACK = 0.45;
 
 /**
  * A bet or raise sized as a fraction of the pot **and** of the Stack, drawn fresh
