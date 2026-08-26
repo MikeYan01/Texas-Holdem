@@ -88,8 +88,9 @@ Three conventions worth knowing before you change anything:
 
 For **why** any of it is built this way, read [`docs/adr/`](docs/adr/): why the hand
 evaluator is written from scratch, why equity is computed three different ways depending
-on the Street, why Bot balance is measured rather than eyeballed, why the interface is
-bilingual. Each one records the options that were rejected and what the decision cost.
+on the Street, why Bot balance is measured rather than eyeballed, why deeper Stacks were
+tried and rejected, why the interface is bilingual. Each one records the options that were
+rejected and what the decision cost.
 
 Conventions for AI agents working in the repo are in [`AGENTS.md`](AGENTS.md).
 

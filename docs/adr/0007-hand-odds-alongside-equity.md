@@ -33,3 +33,17 @@ One more piece of generated data, 17 KB (counts take more room than probabilitie
 The strongest validation of the lot came for free: average the 169 starting hands weighted by how often they are dealt, and the result has to reproduce the published hand-category frequencies for seven random cards — measured, it matches to three decimal places exactly (Pair 43.823%, Two pair 23.496%…). Any cell computed wrong is exposed here, and the check runs in a few milliseconds.
 
 The Equity **computation** was not deleted; the whole of ADR-0003's Bot decision logic rests on it. What was deleted is its display, and with it the redundant computation that ran whenever the action reached the Player.
+
+## Amendment: Bots consume Hand Odds too, by way of Upside (found while fixing Bot decision quality)
+
+The division this ADR draws — "Equity is kept for Bot decisions, Hand Odds is what the Player is shown" — no longer holds on the Bot side. It was a statement about who uses which number, and one of the two halves has turned out to be wrong.
+
+Bots now read the Hand Odds distribution as well, through **Upside**: the probability of finishing at or above a fixed hand category, which is the tail of the same distribution this ADR already computes exactly at every Street.
+
+The reason is that Equity **cannot express what a Bot needs in order to bluff well**. It answers "am I going to win" and averages the distribution away, so two Hands with identical 30% Equity can be completely different animals: "the nut flush or nothing" is polarised and worth semi-bluffing or pushing a short Stack with, while "spread across weak pairs" is thin and worth neither. Measured on the flop, a nut flush draw has 35.8% Upside and top pair 2.6% — a distinction Equity has no way to make.
+
+Upside costs nothing new. It is an aggregation of `handOdds`, so it inherits every property recorded above: exact at every Street, no sampling error, worst case 1,081 evaluations, and **synchronous** — it does not go behind the asynchronous Equity interface, which exists only because Equity may one day move to a Web Worker.
+
+On the river there are no community cards left to come, so Upside is 0 or 1 rather than a probability. That is correct and intended: it is meaningful before the flop, on the flop and on the turn, and on the river the Hand is already made and Equity alone governs. The Bots stop consulting it there rather than treating a certainty as an appetite.
+
+**The display side of this ADR is unchanged.** The interface still shows Hand Odds and nothing else. Equity is not displayed, and neither is Upside.

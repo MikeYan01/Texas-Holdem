@@ -47,6 +47,10 @@ _Avoid_: dealer (there is no dealer role in this project — dealing is the engi
 Where a Seat stands relative to the Button in the order of action (UTG, CO, BTN, SB, BB and
 so on). Because the Button moves every Hand, a given Seat's Position changes every Hand —
 Position is not a seat number.
+
+A Bot reads it as one number: 0 for the Seat that acts first among those still in the Hand,
+1 for the Seat that acts last. It widens the Opening Range and raises bluff frequency,
+which is what makes Position something a Player can watch for and then exploit.
 _Avoid_: seat index, 座位号
 
 **Blind(盲注)**:
@@ -111,6 +115,21 @@ When a Seat is all-in but its Stack cannot cover what others have bet, the exces
 pot of its own. The all-in Seat has no claim on it. A single Hand can hold several side pots
 at once, and this is the easiest thing on a six-handed table to get wrong.
 _Avoid_: split pot (that is a tie at showdown, a different thing)
+
+**Effective Stack(有效码量)**:
+The smaller of a Seat's own Stack and the largest Stack still in the Hand against it — what
+can actually be won or lost. Holding 20 BB against an opponent with 4 makes it a 4 BB pot,
+so it, and not the Stack, is the honest measure of how short a Seat really is. A Bot reads
+it to decide whether a push is worth taking.
+_Avoid_: Stack (unqualified — that is the Seat's own chips and a different number)
+
+**Aggressor(主动下注者)**:
+The Seat that last bet, raised or pushed on a given Street. The engine records only this,
+per Street, and never a full action history. It is what lets a bluff be a story rather than
+an isolated coin flip: a Bot that led the Street before can lead again. A Seat pushing its
+last chips in for **less** than the current bet has called, not led, and is not the
+Aggressor.
+_Avoid_: raiser (a bet is not a raise), last actor, 上家 (which means the Seat before you)
 
 **Score(净胜负)**:
 A Seat's cumulative net win/loss across the **whole Session**. May be negative. It is the
