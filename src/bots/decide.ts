@@ -51,6 +51,50 @@ export function callThresholdFor(odds: number, margin: number): number {
   return Math.min(flat, proportional);
 }
 
+/**
+ * Why a Bot did what it did.
+ *
+ * Produced as a by-product of the decision rather than by a second pass over it,
+ * so the measurement in `measure-balance.ts` reports the reasoning of the
+ * decision that was actually taken. An instrumented copy of the rule would drift
+ * from the real one the first time either was edited; there is no copy.
+ */
+export type DecisionReasons = {
+  /** The Equity handed in, before this personality's misreading of it. */
+  readonly trueEquity: number;
+  /** What the Bot believes it holds: `trueEquity` plus this personality's noise. */
+  readonly equity: number;
+  readonly potOdds: number;
+  readonly callThreshold: number;
+  readonly raiseThreshold: number;
+  /** Equity cleared the raising standard, so aggression here is a value bet. */
+  readonly wantsToRaise: boolean;
+  /** The bluff roll came in. Says nothing about whether aggression was legal. */
+  readonly bluffing: boolean;
+  readonly aggressive: boolean;
+  /**
+   * Chips went in because the bluff roll came in, not because Equity called for
+   * it — the Player's "was that air?". Note that aggression taken instead of
+   * folding is bluff-driven whatever `wantsToRaise` says: on that path the raise
+   * test is never reached, so the roll is the entire reason.
+   */
+  readonly bluffDriven: boolean;
+  /** What it wanted to raise to, before the legal range had its say. */
+  readonly intendedRaiseTo: number | null;
+  /** What it actually raised to, or pushed for. */
+  readonly raiseTo: number | null;
+  /** It wanted more than it holds, so the legal maximum decided the action. */
+  readonly clampedDown: boolean;
+  readonly allIn: boolean;
+  /** Chips over and above the call, as a share of the pot being bet into. */
+  readonly sizeFraction: number | null;
+};
+
+export type Decision = {
+  readonly action: PlayerAction;
+  readonly reasons: DecisionReasons;
+};
+
 export async function decide(
   view: BotView,
   personality: Personality,
@@ -76,6 +120,21 @@ export function decideWithEquity(
   trueEquity: number,
   rng: BotDeps['rng'],
 ): PlayerAction {
+  return explainDecision(view, personality, trueEquity, rng).action;
+}
+
+/**
+ * The same decision, with its reasoning attached. This is the implementation;
+ * `decideWithEquity` is a projection of it. Anything that wants to count what the
+ * Bots are doing reads the reasons rather than guessing at them from the action,
+ * because "bet" alone cannot say whether the Bot had a hand.
+ */
+export function explainDecision(
+  view: BotView,
+  personality: Personality,
+  trueEquity: number,
+  rng: BotDeps['rng'],
+): Decision {
   const legal = view.legalActions;
 
   // Bots never see the real number. A Bot playing off perfect Equity calls far
@@ -105,21 +164,77 @@ export function decideWithEquity(
   // time.
   const canOpen = legal.canBet || legal.canRaise;
 
+  const passive = (action: PlayerAction): Decision => ({
+    action,
+    reasons: {
+      trueEquity,
+      equity,
+      potOdds: odds,
+      callThreshold,
+      raiseThreshold,
+      wantsToRaise,
+      bluffing,
+      aggressive: false,
+      bluffDriven: false,
+      intendedRaiseTo: null,
+      raiseTo: null,
+      clampedDown: false,
+      allIn: false,
+      sizeFraction: null,
+    },
+  });
+
+  const fire = (bluffDriven: boolean): Decision => {
+    const sized = sizedAggression(view, personality, rng);
+    return {
+      action: sized.action,
+      reasons: {
+        trueEquity,
+        equity,
+        potOdds: odds,
+        callThreshold,
+        raiseThreshold,
+        wantsToRaise,
+        bluffing,
+        aggressive: true,
+        bluffDriven,
+        intendedRaiseTo: sized.intendedRaiseTo,
+        raiseTo: sized.raiseTo,
+        clampedDown: sized.intendedRaiseTo > legal.maxRaiseTo,
+        allIn: sized.action.type === 'all-in',
+        sizeFraction:
+          (sized.raiseTo - view.currentBet) / Math.max(1, view.potTotal + legal.callAmount),
+      },
+    };
+  };
+
   if (legal.canCheck) {
-    if ((wantsToRaise || bluffing) && canOpen) return sizedAggression(view, personality, rng);
-    return { type: 'check' };
+    if ((wantsToRaise || bluffing) && canOpen) return fire(!wantsToRaise);
+    return passive({ type: 'check' });
   }
 
   if (equity < callThreshold) {
     // Even a hand with nothing takes the pot often enough to be worth firing at
-    // sometimes; this is where Maniac picks up pots with 7-2.
-    if (bluffing && rng() < 0.5 && canOpen) return sizedAggression(view, personality, rng);
-    return { type: 'fold' };
+    // sometimes; this is where the Bluffer picks up pots with 7-2.
+    //
+    // Aggression from here is bluff-driven whatever `wantsToRaise` says, because
+    // the raise test below was never reached: the roll is the entire reason
+    // chips went in.
+    if (bluffing && rng() < 0.5 && canOpen) return fire(true);
+    return passive({ type: 'fold' });
   }
 
-  if (wantsToRaise && canOpen) return sizedAggression(view, personality, rng);
-  return legal.canCall ? { type: 'call' } : { type: 'check' };
+  if (wantsToRaise && canOpen) return fire(false);
+  return passive(legal.canCall ? { type: 'call' } : { type: 'check' });
 }
+
+type SizedAggression = {
+  readonly action: PlayerAction;
+  /** Before the legal range had its say. Above `maxRaiseTo` means it overshot. */
+  readonly intendedRaiseTo: number;
+  /** After clamping. For a push this is the Stack, which is what went in. */
+  readonly raiseTo: number;
+};
 
 /**
  * A bet or raise sized as a fraction of the pot, drawn fresh each time so the
@@ -129,7 +244,7 @@ function sizedAggression(
   view: BotView,
   personality: Personality,
   rng: BotDeps['rng'],
-): PlayerAction {
+): SizedAggression {
   const legal = view.legalActions;
   const { min, max } = personality.betSizing;
   const fraction = min + rng() * (max - min);
@@ -139,6 +254,12 @@ function sizedAggression(
   const raiseTo = clamp(target, legal.minRaiseTo, legal.maxRaiseTo);
 
   // Pushing the last chip in is an all-in, and saying so makes a better table.
-  if (raiseTo >= legal.maxRaiseTo && legal.canAllIn) return { type: 'all-in' };
-  return legal.canBet ? { type: 'bet', to: raiseTo } : { type: 'raise', to: raiseTo };
+  if (raiseTo >= legal.maxRaiseTo && legal.canAllIn) {
+    return { action: { type: 'all-in' }, intendedRaiseTo: target, raiseTo: legal.maxRaiseTo };
+  }
+  return {
+    action: legal.canBet ? { type: 'bet', to: raiseTo } : { type: 'raise', to: raiseTo },
+    intendedRaiseTo: target,
+    raiseTo,
+  };
 }

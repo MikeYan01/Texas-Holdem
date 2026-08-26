@@ -4,7 +4,7 @@ import { createSession, reduce } from '../engine/engine.ts';
 import { enumerateLegalActions } from '../engine/random-play.ts';
 import { positionAt } from '../engine/test-fixtures.ts';
 import { IllegalActionError, type PlayerAction, type SessionState } from '../engine/types.ts';
-import { callThresholdFor, decide, decideWithEquity, potOdds } from './decide.ts';
+import { callThresholdFor, decide, decideWithEquity, explainDecision, potOdds } from './decide.ts';
 import { PERSONALITIES, PERSONALITY_KEYS } from './personalities.ts';
 import { assignPersonalities, makeBotView } from './view.ts';
 import type { BotView, PersonalityKey } from './types.ts';
@@ -93,6 +93,66 @@ describe('the reason ADR-0003 exists', () => {
       (personality) => decideWithEquity(view, personality, 0.25, seededRng(3)).type === 'fold',
     );
     expect(folds.length).toBeGreaterThan(0);
+  });
+});
+
+describe('the reasons behind a decision are the decision', () => {
+  // The measurement in `behaviour.ts` reports on what the Bots did, which means
+  // it has to know *why*. An instrumented copy of the rule would drift from the
+  // real one the first time either was edited, so there is no copy: the reasons
+  // fall out of the same call that produced the action.
+  it('gives the same action as the plain decision, for every personality and seed', () => {
+    const views = [
+      viewFacing({ potTotal: 100, callAmount: 2 }),
+      viewFacing({ potTotal: 40, callAmount: 10 }),
+      viewFacing({ potTotal: 3, callAmount: 2, street: 'preflop' }),
+      viewFacing({ potTotal: 60, callAmount: 0 }),
+    ];
+    for (const view of views) {
+      for (const personality of everyPersonality) {
+        for (let seed = 0; seed < 40; seed++) {
+          const equity = (seed % 20) * 0.05;
+          const plain = decideWithEquity(view, personality, equity, seededRng(seed));
+          const explained = explainDecision(view, personality, equity, seededRng(seed));
+          expect(explained.action, `${personality.key} seed ${seed}`).toEqual(plain);
+        }
+      }
+    }
+  });
+
+  it('calls aggression aggression, and nothing else', () => {
+    const view = viewFacing({ potTotal: 60, callAmount: 0 });
+    for (let seed = 0; seed < 100; seed++) {
+      const { action, reasons } = explainDecision(view, PERSONALITIES.LAG, 0.3, seededRng(seed));
+      const fired = action.type === 'bet' || action.type === 'raise' || action.type === 'all-in';
+      expect(reasons.aggressive, `seed ${seed}`).toBe(fired);
+      expect(reasons.raiseTo === null, `seed ${seed}`).toBe(!fired);
+    }
+  });
+
+  it('reports a bet taken instead of a fold as bluff-driven, whatever the raise test says', () => {
+    // On that path the raise test is never reached — the roll is the entire
+    // reason chips went in. Before the flop the calling threshold is the higher
+    // of the two, so this is exactly where a raise-worthy Hand ends up.
+    const view = viewFacing({ potTotal: 3, callAmount: 2, street: 'preflop' });
+    let found = 0;
+    for (let seed = 0; seed < 600; seed++) {
+      const { reasons } = explainDecision(view, PERSONALITIES.Bluffer, 0.3, seededRng(seed));
+      if (!reasons.aggressive || reasons.equity >= reasons.callThreshold) continue;
+      found += 1;
+      expect(reasons.bluffDriven, `seed ${seed}`).toBe(true);
+    }
+    expect(found).toBeGreaterThan(0);
+  });
+
+  it('says when the legal maximum, rather than the Bot, chose the amount', () => {
+    // Two big blinds behind and a pot of 60: the intended bet is several times
+    // the Stack, and the clamp turns it into a push.
+    const view = viewFacing({ potTotal: 60, callAmount: 0, stack: 10 });
+    const { action, reasons } = explainDecision(view, PERSONALITIES.LAG, 0.95, seededRng(4));
+    expect(action.type).toBe('all-in');
+    expect(reasons.clampedDown).toBe(true);
+    expect(reasons.intendedRaiseTo).toBeGreaterThan(view.legalActions.maxRaiseTo);
   });
 });
 

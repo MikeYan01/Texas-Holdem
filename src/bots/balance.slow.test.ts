@@ -24,7 +24,7 @@ import { measureBalance } from './measure-balance.ts';
 const WORST_ALLOWED_BB = -2;
 const WIDEST_SPREAD_BB = 4;
 
-const results = measureBalance({ sessions: 300 });
+const results = measureBalance({ sessions: 300 }).balance;
 
 describe('the table is a game, not a donation', () => {
   it('observed a meaningful number of Hands for every personality', () => {
