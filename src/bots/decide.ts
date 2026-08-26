@@ -57,6 +57,35 @@ export function callThresholdFor(odds: number, margin: number): number {
 }
 
 /**
+ * A Hand this strong is a near-certain winner, and checking one is a mistake the
+ * Player can see from the sofa.
+ *
+ * No raising threshold may sit above this, less whatever the Bot misreads its own
+ * Equity by. The bound is needed because the per-personality margin is
+ * **additive** on an even share of the pot, so the same constant means very
+ * different things at different opponent counts: adding 0.4 to 0.167 is a 3.4x
+ * multiplier, adding it to 0.5 only 1.8x. Calling Station therefore bet with 57%
+ * Equity six-handed and demanded 90% heads-up, and was measured checking while
+ * holding 96.8%.
+ *
+ * The calling threshold has had a two-branch minimum protecting it from the same
+ * shape all along. This is the first equivalent on the raising side.
+ */
+export const A_NEAR_CERTAIN_WINNER = 0.85;
+
+/**
+ * How much Equity a raise asks for after the flop: an even share of the pot plus
+ * this personality's margin, capped so it can never demand a near-lock.
+ *
+ * The additive form is kept below the ceiling — that is where the personalities
+ * are supposed to differ — and only the extreme passive end is capped.
+ */
+export function raiseThresholdFor(opponentCount: number, margin: number, noise: number): number {
+  const evenShare = 1 / (opponentCount + 1);
+  return Math.min(evenShare + margin, A_NEAR_CERTAIN_WINNER - noise);
+}
+
+/**
  * Why a Bot did what it did.
  *
  * Produced as a by-product of the decision rather than by a second pass over it,
@@ -157,7 +186,14 @@ export function explainDecision(
 
   // After the flop, an even share of the pot is the reference point for betting:
   // with more than your share of the Equity, betting is the profitable move.
-  const raiseThreshold = 1 / (view.opponentCount + 1) + personality.raiseMargin;
+  // Subtracting the noise from the ceiling is what makes "never checks a
+  // near-certain winner" exact rather than nearly true: the Bot decides on the
+  // number it misread, so the cap has to leave room for the misreading.
+  const raiseThreshold = raiseThresholdFor(
+    view.opponentCount,
+    personality.raiseMargin,
+    personality.equityNoise,
+  );
 
   // Before the flop it is not, because an even share six-handed is 0.167, which
   // is by definition the Equity of a random Hand. So the standard there is an

@@ -5,7 +5,15 @@ import { createSession, reduce } from '../engine/engine.ts';
 import { enumerateLegalActions } from '../engine/random-play.ts';
 import { positionAt } from '../engine/test-fixtures.ts';
 import { IllegalActionError, type PlayerAction, type SessionState } from '../engine/types.ts';
-import { callThresholdFor, decide, decideWithEquity, explainDecision, potOdds } from './decide.ts';
+import {
+  A_NEAR_CERTAIN_WINNER,
+  callThresholdFor,
+  decide,
+  decideWithEquity,
+  explainDecision,
+  potOdds,
+  raiseThresholdFor,
+} from './decide.ts';
 import { PERSONALITIES, PERSONALITY_KEYS } from './personalities.ts';
 import { assignPersonalities, makeBotView } from './view.ts';
 import type { BotView, PersonalityKey } from './types.ts';
@@ -326,6 +334,90 @@ describe('the personalities differ in the right direction', () => {
       const { entryRate } = tendencies(key);
       expect(entryRate, key).toBeGreaterThan(0);
       expect(entryRate, key).toBeLessThanOrEqual(1);
+    }
+  });
+});
+
+describe('nobody checks a Hand that cannot lose', () => {
+  it('caps the raising threshold below a near-certain winner, whatever the margin', () => {
+    for (const personality of everyPersonality) {
+      for (let opponents = 1; opponents <= 5; opponents++) {
+        const threshold = raiseThresholdFor(
+          opponents,
+          personality.raiseMargin,
+          personality.equityNoise,
+        );
+        expect(threshold, `${personality.key} against ${opponents}`).toBeLessThanOrEqual(
+          A_NEAR_CERTAIN_WINNER - personality.equityNoise,
+        );
+      }
+    }
+  });
+
+  it('leaves the additive margin alone below the ceiling', () => {
+    // Six-handed, an even share is 0.167 and nobody's margin reaches the cap, so
+    // the form the personalities are tuned on is untouched. Only the extreme
+    // passive end is capped, and only heads-up.
+    for (const personality of everyPersonality) {
+      expect(raiseThresholdFor(5, personality.raiseMargin, personality.equityNoise)).toBeCloseTo(
+        1 / 6 + personality.raiseMargin,
+        9,
+      );
+    }
+    // Heads-up, only the loosest passive personality is above the line.
+    expect(raiseThresholdFor(1, PERSONALITIES.Rock.raiseMargin, PERSONALITIES.Rock.equityNoise)) //
+      .toBeCloseTo(0.5 + PERSONALITIES.Rock.raiseMargin, 9);
+    expect(
+      raiseThresholdFor(
+        1,
+        PERSONALITIES.CallingStation.raiseMargin,
+        PERSONALITIES.CallingStation.equityNoise,
+      ),
+    ).toBeLessThan(0.5 + PERSONALITIES.CallingStation.raiseMargin);
+  });
+
+  it('never checks a near-certain winner, at any opponent count', () => {
+    // Measured before the ceiling: Calling Station checked 3243 times holding
+    // better than 85% Equity across a million decisions, once with 96.8%. The
+    // identity behind it — highest Equity ever checked equals the raising
+    // threshold plus the Equity noise — held for all five personalities.
+    let checked = 0;
+    for (const personality of everyPersonality) {
+      for (const opponentCount of [1, 2, 3, 5]) {
+        const view = viewFacing({ potTotal: 60, callAmount: 0, opponentCount });
+        for (const trueEquity of [0.851, 0.9, 0.97, 1]) {
+          for (let seed = 0; seed < 60; seed++) {
+            const action = decideWithEquity(view, personality, trueEquity, seededRng(seed));
+            checked += 1;
+            expect(
+              action.type,
+              `${personality.key} checked ${trueEquity} against ${opponentCount}`,
+            ).not.toBe('check');
+          }
+        }
+      }
+    }
+    expect(checked).toBeGreaterThan(4000);
+  });
+
+  it('still lets a passive personality be visibly passive', () => {
+    // The ceiling must not turn the Calling Station into an aggressive Bot. It
+    // has to keep raising less often than the LAG at every opponent count.
+    const raiseRate = (key: PersonalityKey, opponentCount: number): number => {
+      const view = viewFacing({ potTotal: 60, callAmount: 0, opponentCount });
+      let raises = 0;
+      for (let seed = 0; seed < 200; seed++) {
+        const equity = 0.1 + (seed % 40) * 0.02;
+        const action = decideWithEquity(view, PERSONALITIES[key], equity, seededRng(seed));
+        if (action.type !== 'check') raises += 1;
+      }
+      return raises / 200;
+    };
+    for (const opponentCount of [1, 2, 5]) {
+      expect(raiseRate('CallingStation', opponentCount)).toBeLessThan(
+        raiseRate('LAG', opponentCount),
+      );
+      expect(raiseRate('Rock', opponentCount)).toBeLessThan(raiseRate('TAG', opponentCount));
     }
   });
 });

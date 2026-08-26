@@ -3,14 +3,13 @@ import { positionAt } from '../engine/test-fixtures.ts';
 import { seededRng } from '../poker-math/rng.ts';
 import {
   A_BIG_BET,
-  A_LOCK,
   BehaviourTally,
   EQUITY_BANDS,
   STACK_DEPTHS,
   equityBandOf,
   stackDepthOf,
 } from './behaviour.ts';
-import { explainDecision } from './decide.ts';
+import { explainDecision, type DecisionReasons } from './decide.ts';
 import { PERSONALITIES } from './personalities.ts';
 import type { BotView } from './types.ts';
 import { makeBotView } from './view.ts';
@@ -71,6 +70,25 @@ function tallyOne(view: BotView, equity: number, seed: number) {
   return { action, reasons, behaviour: report.perPersonality.find((b) => b.key === 'LAG')! };
 }
 
+/** A passive decision holding `trueEquity`, written down rather than played out. */
+const checkingWith = (trueEquity: number): DecisionReasons => ({
+  trueEquity,
+  equity: trueEquity,
+  potOdds: 0,
+  callThreshold: 0,
+  raiseThreshold: 1,
+  startingHandPercentile: null,
+  wantsToRaise: false,
+  bluffing: false,
+  aggressive: false,
+  bluffDriven: false,
+  intendedRaiseTo: null,
+  raiseTo: null,
+  clampedDown: false,
+  allIn: false,
+  sizeFraction: null,
+});
+
 describe('the readout counts what the Bot actually did', () => {
   it('never counts a check as aggression, however the Bot got there', () => {
     const view = viewFor({ stack: 200, potTotal: 60, callAmount: 0 });
@@ -82,28 +100,19 @@ describe('the readout counts what the Bot actually did', () => {
     }
   });
 
-  it('notices a Bot checking a near-certain winner', () => {
-    // Calling Station's margin is additive, so heads-up its raising threshold
-    // sits at 0.9 and it checks hands that cannot lose. That is the mistake
-    // ticket 03 exists to remove; this is the counter that will show it gone.
+  it('counts a check made holding a near-certain winner', () => {
+    // No personality can produce one any more — that is what the ceiling on the
+    // raising threshold is for — so the counter is fed a decision directly. It
+    // has to keep working, or the guard would silently stop guarding.
     const view = viewFor({ stack: 200, potTotal: 60, callAmount: 0 });
     const tally = new BehaviourTally();
     tally.startHand();
-    let checks = 0;
-    for (let seed = 0; seed < 200; seed++) {
-      const { action, reasons } = explainDecision(
-        view,
-        PERSONALITIES.CallingStation,
-        0.88,
-        seededRng(seed),
-      );
-      tally.record('CallingStation', view, reasons, action.type);
-      if (action.type === 'check') checks += 1;
-    }
+    tally.record('CallingStation', view, checkingWith(0.97), 'check');
+    tally.record('CallingStation', view, checkingWith(0.5), 'check');
+
     const behaviour = tally.report(1).perPersonality.find((b) => b.key === 'CallingStation')!;
-    expect(checks).toBeGreaterThan(0);
-    expect(behaviour.checksHoldingALock).toBe(checks);
-    expect(behaviour.highestEquityChecked).toBeGreaterThan(A_LOCK);
+    expect(behaviour.checksHoldingALock).toBe(1);
+    expect(behaviour.highestEquityChecked).toBeCloseTo(0.97, 9);
   });
 
   it('measures a big bet against the pot it is being fired into', () => {

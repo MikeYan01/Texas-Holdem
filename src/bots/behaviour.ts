@@ -14,7 +14,7 @@
 // is the same reasoning that keeps the personality tests on relative ordering.
 
 import { STREETS, type PlayerAction, type Street } from '../engine/types.ts';
-import type { DecisionReasons } from './decide.ts';
+import { A_NEAR_CERTAIN_WINNER, type DecisionReasons } from './decide.ts';
 import { PERSONALITY_KEYS } from './personalities.ts';
 import type { BotView, PersonalityKey } from './types.ts';
 
@@ -30,8 +30,6 @@ export type EquityBand = (typeof EQUITY_BANDS)[number];
 export const FLOP_ROLES = ['bluffed', 'value-bet', 'checked'] as const;
 export type FlopRole = (typeof FLOP_ROLES)[number];
 
-/** Anything over this is a near-lock: checking it is a mistake a Player can see. */
-export const A_LOCK = 0.85;
 /** A bet of this share of the pot or more is what the Player reads as "big". */
 export const A_BIG_BET = 0.6;
 /** Under this much Equity behind a big bet, the Reveal shows air. */
@@ -283,7 +281,7 @@ export class BehaviourTally {
 
     if (action === 'check') {
       t.highestEquityChecked = Math.max(t.highestEquityChecked, reasons.trueEquity);
-      if (reasons.trueEquity > A_LOCK) t.checksHoldingALock += 1;
+      if (reasons.trueEquity > A_NEAR_CERTAIN_WINNER) t.checksHoldingALock += 1;
     }
     if (action === 'fold' && reasons.wantsToRaise) t.foldsItWantedToRaise += 1;
   }
