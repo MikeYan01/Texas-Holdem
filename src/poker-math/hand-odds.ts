@@ -131,3 +131,52 @@ export function madeCategoryNow(
   if (board.length < 3) return null;
   return categoryOf(evaluateHand([...hole, ...board]));
 }
+
+/**
+ * The category at which a Hand stops being a pair and becomes something that
+ * wins a big pot: a straight or better.
+ *
+ * Set here rather than lower because the point is to separate draws from made
+ * pairs. At this bar a flush draw on the flop reads 35.8% and top pair 2.6%; a
+ * bar of trips would call top pair 9.3% and blunt the distinction. Set higher —
+ * at a flush — and every straight draw reads zero, which is worse.
+ *
+ * The bar is **fixed**, deliberately, and not relative to the board. Judging
+ * whether a given made hand is "big for this board" means modelling what the
+ * board does for everyone else, which is opponent range modelling under another
+ * name — the road ADR-0003 keeps shut.
+ */
+export const UPSIDE_BAR: HandCategory = HandCategory.Straight;
+
+/**
+ * **Upside**: the probability of finishing at or above `UPSIDE_BAR`.
+ *
+ * Equity answers "am I going to win" and averages the distribution away. Upside
+ * keeps its *shape*. Two Hands with identical 30% Equity are completely
+ * different animals — "the nut flush or nothing" is polarised and worth
+ * semi-bluffing or pushing a short Stack with, while "spread across weak pairs"
+ * is thin and worth neither. Upside is what tells them apart.
+ *
+ * Derived by aggregating the exact Hand Odds distribution, so it inherits that
+ * function's properties: exact at every Street, no sampling error, worst case
+ * 1,081 evaluations. Synchronous for the same reason `handOdds` is — Equity
+ * hides behind an `await` only because it may one day move to a Web Worker, and
+ * this never will.
+ *
+ * **On the river it is 0 or 1, not a probability**, because nothing is left to
+ * come and the Hand is already made. That is correct and intended: Upside is
+ * meaningful before the flop, on the flop and on the turn, and on the river
+ * Equity alone governs.
+ */
+export function upside(hole: readonly [Card, Card], board: readonly Card[]): number {
+  return upsideOf(handOdds(hole, board));
+}
+
+/** The same, for a caller that already has the distribution in hand. */
+export function upsideOf(odds: HandOdds): number {
+  let total = 0;
+  for (let category = UPSIDE_BAR; category < HAND_CATEGORY_COUNT; category++) {
+    total += odds.probabilities[category] ?? 0;
+  }
+  return total;
+}

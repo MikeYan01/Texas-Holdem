@@ -422,6 +422,83 @@ describe('nobody checks a Hand that cannot lose', () => {
   });
 });
 
+describe('a strong draw is worth firing at', () => {
+  /** A Seat on the flop holding `hole`, first to act into an unopened pot. */
+  const onTheFlop = (hole: string, board: string, street: 'flop' | 'turn' | 'river' = 'flop') => {
+    const state = positionAt({
+      seats: [
+        { stack: 200, hole, streetCommitted: 0, committed: 30 },
+        { stack: 200, hole: '2c 3d', streetCommitted: 0, committed: 30 },
+      ],
+      street,
+      board,
+      currentBet: 0,
+      actorSeat: 0,
+    });
+    return makeBotView(state, 0);
+  };
+
+  it('raises the nut flush draw and checks the pair, at the same Equity', () => {
+    // Both Hands are handed exactly 30% Equity. Equity cannot tell them apart —
+    // it averages the distribution away — so if the two behave differently, it is
+    // Upside doing it.
+    const draw = onTheFlop('Ah 7h', 'Kh 4h 2c');
+    const pair = onTheFlop('8h 8d', 'Kc 4s 2d');
+
+    let drawFired = 0;
+    let pairFired = 0;
+    for (let seed = 0; seed < 200; seed++) {
+      if (explainDecision(draw, PERSONALITIES.LAG, 0.3, seededRng(seed)).reasons.wantsToRaise) {
+        drawFired += 1;
+      }
+      if (explainDecision(pair, PERSONALITIES.LAG, 0.3, seededRng(seed)).reasons.wantsToRaise) {
+        pairFired += 1;
+      }
+    }
+    expect(drawFired).toBeGreaterThan(0);
+    expect(drawFired).toBeGreaterThan(pairFired);
+  });
+
+  it('lowers a threshold in proportion to appetite, so the styles still differ', () => {
+    const draw = onTheFlop('Ah 7h', 'Kh 4h 2c');
+    const thresholdFor = (key: PersonalityKey) =>
+      explainDecision(draw, PERSONALITIES[key], 0.3, seededRng(1)).reasons.raiseThreshold;
+
+    expect(thresholdFor('Bluffer')).toBeLessThan(thresholdFor('TAG'));
+    expect(thresholdFor('TAG')).toBeLessThan(thresholdFor('Rock'));
+    expect(thresholdFor('Rock')).toBeLessThan(thresholdFor('CallingStation'));
+  });
+
+  it('leaves a Hand with nothing coming exactly where it was', () => {
+    // Queen-high on a disconnected board has no Upside at all, so the appetite
+    // has nothing to multiply and the threshold is the plain even-share form.
+    const air = onTheFlop('Qh 4d', '9c 7s 2h');
+    for (const personality of everyPersonality) {
+      const { reasons } = explainDecision(air, personality, 0.3, seededRng(1));
+      expect(reasons.upside, personality.key).toBe(0);
+      expect(reasons.raiseThreshold, personality.key).toBeCloseTo(
+        raiseThresholdFor(1, personality.raiseMargin, personality.equityNoise),
+        9,
+      );
+    }
+  });
+
+  it('stops consulting Upside on the river, where the Hand is already made', () => {
+    // On the river Upside is 0 or 1 rather than a probability. Treating a
+    // certainty as an appetite would drop the threshold to nothing for every
+    // made straight, so the Bots simply stop asking.
+    const madeStraight = onTheFlop('9h 8d', '7c 6s 5h 2d Th', 'river');
+    for (const personality of everyPersonality) {
+      const { reasons } = explainDecision(madeStraight, personality, 0.9, seededRng(1));
+      expect(reasons.upside, personality.key).toBe(0);
+      expect(reasons.raiseThreshold, personality.key).toBeCloseTo(
+        raiseThresholdFor(1, personality.raiseMargin, personality.equityNoise),
+        9,
+      );
+    }
+  });
+});
+
 describe('bet sizing', () => {
   it('varies rather than repeating one number', () => {
     const view = viewFacing({ potTotal: 60, callAmount: 0 });

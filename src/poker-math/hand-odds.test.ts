@@ -1,7 +1,14 @@
 import { describe, expect, it } from 'vitest';
 import { parseCards, type Card } from './cards.ts';
 import { HandCategory } from './evaluate-hand.ts';
-import { handOdds, likeliestCategories, madeCategoryNow } from './hand-odds.ts';
+import {
+  UPSIDE_BAR,
+  handOdds,
+  likeliestCategories,
+  madeCategoryNow,
+  upside,
+  upsideOf,
+} from './hand-odds.ts';
 import { PREFLOP_HAND_ODDS } from './preflop-hand-odds.ts';
 import { allCanonicalLabels } from './starting-hands.ts';
 
@@ -219,5 +226,71 @@ describe('performance', () => {
     // The flop is the worst case at 1,081 evaluations. This is why the interface
     // is synchronous while Equity's is not.
     expect(each).toBeLessThan(20);
+  });
+});
+
+describe('Upside', () => {
+  const up = (holeText: string, board = '') => upside(hole(holeText), parseCards(board));
+
+  it('is the tail of the same distribution Hand Odds already reports', () => {
+    const distribution = odds('Ah 7h', 'Kh 4h 2c');
+    const tail = distribution.probabilities
+      .slice(UPSIDE_BAR)
+      .reduce((sum, probability) => sum + probability, 0);
+    expect(up('Ah 7h', 'Kh 4h 2c')).toBeCloseTo(tail, 12);
+    expect(upsideOf(distribution)).toBeCloseTo(tail, 12);
+  });
+
+  it('is exact rather than sampled, so it needs no error bars', () => {
+    // 1,081 run-outs on the flop, every one of them counted. The number is a
+    // ratio of integers, not an estimate.
+    const distribution = odds('Ah 7h', 'Kh 4h 2c');
+    expect(distribution.method).toBe('exact-enumeration');
+    expect(distribution.runOuts).toBe(1081);
+  });
+
+  it('tells a strong draw apart from a made pair, which Equity cannot', () => {
+    // This is the whole reason Upside exists. Equity averages the distribution
+    // away, so "the nut flush or nothing" and "spread across weak pairs" can be
+    // the same number to it. They are not the same Hand.
+    expect(up('Ah 7h', 'Kh 4h 2c')).toBeGreaterThan(0.3); // nut flush draw
+    expect(up('9h 8d', '7c 6s 2h')).toBeGreaterThan(0.3); // open-ended straight draw
+    expect(up('Ah Kd', 'Ac 8s 3h')).toBeLessThan(0.05); // top pair, going nowhere
+    expect(up('Qh 4d', '9c 7s 2h')).toBe(0); // nothing, and nothing coming
+  });
+
+  it('falls as the cards to come run out', () => {
+    // Two cards to come, then one. The same draw is worth less each time.
+    expect(up('Ah 7h', 'Kh 4h 2c')).toBeGreaterThan(up('Ah 7h', 'Kh 4h 2c 9s'));
+  });
+
+  it('is 0 or 1 on the river, and that is correct', () => {
+    // No community cards remain, so there is no probability left to state: the
+    // Hand is already made. Upside is meaningful before the flop, on the flop and
+    // on the turn; on the river Equity alone governs, which is why the Bots stop
+    // consulting it there rather than treating a certainty as an appetite.
+    expect(up('9h 8d', '7c 6s 5h 2d Th')).toBe(1); // a made straight
+    expect(up('Ah Kd', 'Ac 8s 3h 2d 7c')).toBe(0); // one pair, and that is that
+    for (const board of ['7s Kc 2d 9s 4h', '9c 7s 2h Ad Kd']) {
+      const value = up('Ah 7h', board);
+      expect(value === 0 || value === 1, `${board} gave ${value}`).toBe(true);
+    }
+  });
+
+  it('answers before the flop too, from the table', () => {
+    const preflop = up('Ah Kh');
+    expect(odds('Ah Kh').method).toBe('preflop-table');
+    expect(preflop).toBeGreaterThan(0);
+    expect(preflop).toBeLessThan(1);
+    // Suited cards make a flush; the same cards offsuit do not.
+    expect(preflop).toBeGreaterThan(up('Ah Kd'));
+  });
+
+  it('is a probability at every Street', () => {
+    for (const board of ['', 'Kh 4h 2c', 'Kh 4h 2c 9s', 'Kh 4h 2c 9s Td']) {
+      const value = up('Ah 7h', board);
+      expect(value, board).toBeGreaterThanOrEqual(0);
+      expect(value, board).toBeLessThanOrEqual(1);
+    }
   });
 });

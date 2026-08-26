@@ -14,6 +14,7 @@
 // branch on which Bot is deciding.
 
 import type { PlayerAction } from '../engine/types.ts';
+import { upside } from '../poker-math/hand-odds.ts';
 import { startingHandPercentile } from '../poker-math/preflop-equity.ts';
 import type { BotDeps, BotView, Personality } from './types.ts';
 
@@ -102,6 +103,8 @@ export type DecisionReasons = {
   readonly callThreshold: number;
   /** The Equity a raise asks for after the flop. Not consulted before it. */
   readonly raiseThreshold: number;
+  /** The chance of finishing with a big Hand. Zero on the river, where it is moot. */
+  readonly upside: number;
   /** Where the starting Hand ranked, before the flop. Null after it. */
   readonly startingHandPercentile: number | null;
   /** The raising standard was cleared, so aggression here is a value bet. */
@@ -184,15 +187,26 @@ export function explainDecision(
     view.street === 'preflop' ? personality.preflopCallMargin : personality.postflopCallMargin;
   const callThreshold = callThresholdFor(odds, callMargin);
 
+  // Upside: the chance this Hand finishes as something that wins a big pot.
+  // Meaningful before the flop, on the flop and on the turn. On the river nothing
+  // is left to come, so it is 0 or 1 rather than a probability and the Hand is
+  // Equity's business alone.
+  const handUpside = view.street === 'river' ? 0 : upside(view.holeCards, view.board);
+
   // After the flop, an even share of the pot is the reference point for betting:
   // with more than your share of the Equity, betting is the profitable move.
   // Subtracting the noise from the ceiling is what makes "never checks a
   // near-certain winner" exact rather than nearly true: the Bot decides on the
   // number it misread, so the cap has to leave room for the misreading.
-  const raiseThreshold = raiseThresholdFor(
-    view.opponentCount,
-    personality.raiseMargin,
-    personality.equityNoise,
+  //
+  // A polarised Hand then pulls that threshold down in proportion to its Upside,
+  // which is how a strong draw comes to be raised. Equity alone cannot express
+  // this: it averages the distribution away, and "the nut flush or nothing" and
+  // "spread across weak pairs" are the same number to it.
+  const raiseThreshold = Math.max(
+    0,
+    raiseThresholdFor(view.opponentCount, personality.raiseMargin, personality.equityNoise) -
+      personality.semiBluffAppetite * handUpside,
   );
 
   // Before the flop it is not, because an even share six-handed is 0.167, which
@@ -234,6 +248,7 @@ export function explainDecision(
       potOdds: odds,
       callThreshold,
       raiseThreshold,
+      upside: handUpside,
       startingHandPercentile: percentile,
       wantsToRaise,
       bluffing,
@@ -257,6 +272,7 @@ export function explainDecision(
         potOdds: odds,
         callThreshold,
         raiseThreshold,
+        upside: handUpside,
         startingHandPercentile: percentile,
         wantsToRaise,
         bluffing,

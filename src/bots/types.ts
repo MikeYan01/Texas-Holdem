@@ -43,6 +43,16 @@ export type Personality = {
    */
   readonly openingRange: number;
   /**
+   * How far a polarised Hand may pull the raising threshold down. Multiplied by
+   * Upside, so "the nut flush or nothing" fires and "spread across weak pairs"
+   * does not, even where the two have identical Equity.
+   *
+   * This is what puts real air behind some large bets, and it is a value raise
+   * rather than a bluff: the Hand is not good *now*, but it wins a big pot when
+   * it arrives and folds out better Hands when it does not.
+   */
+  readonly semiBluffAppetite: number;
+  /**
    * How badly this Bot misreads its own Equity. Bots must not play off a perfect
    * number: they would call too much and read as mechanical (ADR-0005). The noise
    * also makes the sampling error of 2000 iterations harmless.

@@ -77,6 +77,7 @@ const checkingWith = (trueEquity: number): DecisionReasons => ({
   potOdds: 0,
   callThreshold: 0,
   raiseThreshold: 1,
+  upside: 0,
   startingHandPercentile: null,
   wantsToRaise: false,
   bluffing: false,

@@ -166,6 +166,23 @@ preflop from an exhaustively enumerated table, and after that by counting every 
 run-out. The interface shows only the five likeliest.
 _Avoid_: Equity, 胜率 (that is the probability of winning, not of making a hand)
 
+**Upside(成大牌概率)**:
+The probability of finishing with a **straight or better** — the tail of the Hand Odds
+distribution above a fixed bar. What it adds over Equity is the *shape* of the distribution
+rather than its average: two Hands with identical 30% Equity can be completely different
+animals, and "the nut flush or nothing" is worth semi-bluffing or pushing a short Stack with
+where "spread across weak pairs" is worth neither. Equity averages that difference away;
+Upside is what tells them apart.
+
+The bar is **fixed**, not relative to the board. Deciding whether a made hand is big *for
+this board* means modelling what the board does for everyone else, which is opponent range
+modelling under another name (ADR-0003).
+
+On the river no community cards remain, so Upside is 0 or 1 rather than a probability, and
+the Bots stop consulting it: the Hand is made and Equity alone governs. **Only Bots use it,
+and like Equity it is never displayed.**
+_Avoid_: potential, 潜力 (too vague), draw equity, 听牌率 (which names only the drawing case)
+
 ### The five Bot personalities
 
 All five Bots share one strategy and differ only in threshold parameters. Two dimensions:
