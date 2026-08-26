@@ -114,13 +114,20 @@ describe('the readout counts what the Bot actually did', () => {
   });
 
   it('files an all-in under the Stack depth that produced it', () => {
-    // Two big blinds left, a pot of 60: sizing wants far more than the Stack
-    // holds and the legal maximum turns the intended bet into a push.
-    const view = viewFor({ stack: 10, potTotal: 60, callAmount: 0 });
-    const { action, reasons, behaviour } = tallyOne(view, 0.95, 4);
-    expect(action.type).toBe('all-in');
-    expect(reasons.clampedDown).toBe(true);
-    expect(behaviour.byDepth['<5'].allIns).toBe(1);
+    // Four big blinds behind, facing 12 into a pot of 200: even a bet sized
+    // against the Stack overshoots what the Seat holds, and the clamp pushes.
+    const view = viewFor({ stack: 20, potTotal: 200, callAmount: 12 });
+    const tally = new BehaviourTally();
+    tally.startHand();
+    let pushes = 0;
+    for (let seed = 0; seed < 80; seed++) {
+      const { action, reasons } = explainDecision(view, PERSONALITIES.LAG, 0.95, seededRng(seed));
+      tally.record('LAG', view, reasons, action.type);
+      if (action.type === 'all-in') pushes += 1;
+    }
+    const behaviour = tally.report(1).perPersonality.find((b) => b.key === 'LAG')!;
+    expect(pushes).toBeGreaterThan(0);
+    expect(behaviour.byDepth['<5'].allIns).toBe(pushes);
     expect(behaviour.allInsFromShort).toBe(1);
   });
 });

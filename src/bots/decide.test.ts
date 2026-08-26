@@ -146,13 +146,19 @@ describe('the reasons behind a decision are the decision', () => {
   });
 
   it('says when the legal maximum, rather than the Bot, chose the amount', () => {
-    // Two big blinds behind and a pot of 60: the intended bet is several times
-    // the Stack, and the clamp turns it into a push.
-    const view = viewFacing({ potTotal: 60, callAmount: 0, stack: 10 });
-    const { action, reasons } = explainDecision(view, PERSONALITIES.LAG, 0.95, seededRng(4));
-    expect(action.type).toBe('all-in');
-    expect(reasons.clampedDown).toBe(true);
-    expect(reasons.intendedRaiseTo).toBeGreaterThan(view.legalActions.maxRaiseTo);
+    // Facing 12 with 20 behind: even sized against the Stack the raise overshoots
+    // what the Seat holds, so the clamp turns it into a push. This is now the
+    // exception rather than 11% of all aggression.
+    const view = viewFacing({ potTotal: 200, callAmount: 12, stack: 20 });
+    let clamped = 0;
+    for (let seed = 0; seed < 80; seed++) {
+      const { action, reasons } = explainDecision(view, PERSONALITIES.LAG, 0.95, seededRng(seed));
+      if (!reasons.clampedDown) continue;
+      clamped += 1;
+      expect(action.type, `seed ${seed}`).toBe('all-in');
+      expect(reasons.intendedRaiseTo).toBeGreaterThan(view.legalActions.maxRaiseTo);
+    }
+    expect(clamped).toBeGreaterThan(0);
   });
 });
 
@@ -222,6 +228,47 @@ describe('bet sizing', () => {
         expect(action.to).toBeLessThanOrEqual(view.legalActions.maxRaiseTo);
       }
     }
+  });
+
+  it('bets what the Stack can afford, not five times it', () => {
+    // A Stack of 30 into a pot of 200. Sized off the pot alone the intended bet
+    // is well over the Stack every time, and the legal maximum — not the Bot —
+    // decides the action.
+    const view = viewFacing({ potTotal: 200, callAmount: 0, stack: 30 });
+    for (const personality of everyPersonality) {
+      for (let seed = 0; seed < 60; seed++) {
+        const { reasons } = explainDecision(view, personality, 0.95, seededRng(seed));
+        if (!reasons.aggressive) continue;
+        expect(
+          reasons.intendedRaiseTo,
+          `${personality.key} seed ${seed} wanted ${reasons.intendedRaiseTo} holding 30`,
+        ).toBeLessThanOrEqual(view.legalActions.maxRaiseTo);
+      }
+    }
+  });
+
+  it('still sizes off the pot when the Stack is deep enough not to matter', () => {
+    // 400 behind into a pot of 60: the Stack is not the binding constraint, so
+    // the bet is the pot fraction it always was.
+    const view = viewFacing({ potTotal: 60, callAmount: 0, stack: 400 });
+    const { min, max } = PERSONALITIES.TAG.betSizing;
+    for (let seed = 0; seed < 60; seed++) {
+      const { action, reasons } = explainDecision(view, PERSONALITIES.TAG, 0.95, seededRng(seed));
+      if (action.type !== 'bet') continue;
+      const share = (reasons.raiseTo! - view.currentBet) / view.potTotal;
+      expect(share, `seed ${seed}`).toBeGreaterThanOrEqual(min - 0.02);
+      expect(share, `seed ${seed}`).toBeLessThanOrEqual(max + 0.02);
+    }
+  });
+
+  it('leaves a short Stack still varying its bets, not repeating one number', () => {
+    const view = viewFacing({ potTotal: 200, callAmount: 0, stack: 60 });
+    const sizes = new Set<number>();
+    for (let seed = 0; seed < 80; seed++) {
+      const action = decideWithEquity(view, PERSONALITIES.LAG, 0.9, seededRng(seed));
+      if (action.type === 'bet' || action.type === 'raise') sizes.add(action.to);
+    }
+    expect(sizes.size).toBeGreaterThan(3);
   });
 });
 

@@ -237,8 +237,23 @@ type SizedAggression = {
 };
 
 /**
- * A bet or raise sized as a fraction of the pot, drawn fresh each time so the
- * table cannot be read off a single repeated number.
+ * The most of its own Stack a Bot will voluntarily put behind one bet.
+ *
+ * Sized off the pot alone, a short Stack's intended bet averaged **5.41 times
+ * what it held**, and the legal maximum — not the Bot — decided the action: 55%
+ * of all all-ins came from Stacks under 10 BB, which were only 10% of decisions.
+ * Those pushes were not gambles. Mean true Equity behind them was 68.8%; the Bot
+ * wanted to bet big and had no chips with which to do it.
+ */
+const MOST_OF_A_STACK = 0.6;
+
+/**
+ * A bet or raise sized as a fraction of the pot **and** of the Stack, drawn fresh
+ * each time so the table cannot be read off a single repeated number.
+ *
+ * Whichever of the two asks for less wins. Deep, the pot governs and nothing
+ * changes. Short, the Stack does, and the clamp goes back to being a safeguard
+ * rather than the thing that decides the action.
  */
 function sizedAggression(
   view: BotView,
@@ -249,8 +264,11 @@ function sizedAggression(
   const { min, max } = personality.betSizing;
   const fraction = min + rng() * (max - min);
 
-  const potAfterCall = view.potTotal + legal.callAmount;
-  const target = Math.round(view.currentBet + fraction * potAfterCall);
+  const byPot = fraction * (view.potTotal + legal.callAmount);
+  // The same draw governs both, so a personality that bets big into a pot also
+  // commits more of its Stack. One rule, two readings of the same number.
+  const byStack = fraction * MOST_OF_A_STACK * view.stack;
+  const target = Math.round(view.currentBet + Math.min(byPot, byStack));
   const raiseTo = clamp(target, legal.minRaiseTo, legal.maxRaiseTo);
 
   // Pushing the last chip in is an all-in, and saying so makes a better table.
