@@ -29,9 +29,19 @@ export type Personality = {
   readonly postflopCallMargin: number;
   /**
    * Equity required above an even share of the pot before raising rather than
-   * calling. This is "passive" versus "aggressive".
+   * calling, **after the flop**. This is "passive" versus "aggressive".
    */
   readonly raiseMargin: number;
+  /**
+   * The share of all starting Hands this Bot will put chips in with as a raise,
+   * before the flop. 0.2 means the top fifth. This is the preflop half of
+   * "passive versus aggressive", and it replaces the even-share form there.
+   *
+   * An even share of the pot six-handed is 0.167, which is by definition the
+   * Equity of a random Hand — so a small margin on top of it says "raise with
+   * anything above average", which is not an entry standard at all.
+   */
+  readonly openingRange: number;
   /**
    * How badly this Bot misreads its own Equity. Bots must not play off a perfect
    * number: they would call too much and read as mechanical (ADR-0005). The noise

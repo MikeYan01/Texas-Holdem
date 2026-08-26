@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { allCanonicalLabels, lookupPreflop } from '../poker-math/preflop-equity.ts';
 import { seededRng } from '../poker-math/rng.ts';
 import { createSession, reduce } from '../engine/engine.ts';
 import { enumerateLegalActions } from '../engine/random-play.ts';
@@ -18,12 +19,13 @@ function viewFacing(options: {
   opponentCount?: number;
   street?: 'preflop' | 'flop';
   stack?: number;
+  hole?: string;
 }): BotView {
   const { potTotal, callAmount } = options;
   const stack = options.stack ?? 200;
   const state = positionAt({
     seats: [
-      { stack, hole: 'Ah Kd', streetCommitted: 0, committed: potTotal - callAmount },
+      { stack, hole: options.hole ?? 'Ah Kd', streetCommitted: 0, committed: potTotal - callAmount },
       { stack: 200, hole: '2c 3d', streetCommitted: callAmount, committed: callAmount },
       { stack: 200, hole: '5c 6d', streetCommitted: callAmount, committed: callAmount },
     ],
@@ -130,19 +132,18 @@ describe('the reasons behind a decision are the decision', () => {
     }
   });
 
-  it('reports a bet taken instead of a fold as bluff-driven, whatever the raise test says', () => {
-    // On that path the raise test is never reached — the roll is the entire
-    // reason chips went in. Before the flop the calling threshold is the higher
-    // of the two, so this is exactly where a raise-worthy Hand ends up.
-    const view = viewFacing({ potTotal: 3, callAmount: 2, street: 'preflop' });
-    let found = 0;
-    for (let seed = 0; seed < 600; seed++) {
-      const { reasons } = explainDecision(view, PERSONALITIES.Bluffer, 0.3, seededRng(seed));
-      if (!reasons.aggressive || reasons.equity >= reasons.callThreshold) continue;
-      found += 1;
-      expect(reasons.bluffDriven, `seed ${seed}`).toBe(true);
+  it('reports aggression its own raising standard rejected as bluff-driven', () => {
+    // This is the whole of what the Player means by "was that a bluff?": the
+    // Bot put chips in with a Hand its own standard would not have raised.
+    const view = viewFacing({ potTotal: 60, callAmount: 20 });
+    let bluffs = 0;
+    for (let seed = 0; seed < 400; seed++) {
+      const { reasons } = explainDecision(view, PERSONALITIES.Bluffer, 0.2, seededRng(seed));
+      if (!reasons.aggressive) continue;
+      expect(reasons.bluffDriven, `seed ${seed}`).toBe(!reasons.wantsToRaise);
+      if (reasons.bluffDriven) bluffs += 1;
     }
-    expect(found).toBeGreaterThan(0);
+    expect(bluffs).toBeGreaterThan(0);
   });
 
   it('says when the legal maximum, rather than the Bot, chose the amount', () => {
@@ -162,23 +163,144 @@ describe('the reasons behind a decision are the decision', () => {
   });
 });
 
+describe('the Opening Range, and the contradiction it replaced', () => {
+  /** First in before the flop: the blinds are up, nobody has raised. */
+  const firstIn = (hole: string): BotView => {
+    const state = positionAt({
+      seats: [
+        { stack: 100, hole, streetCommitted: 0 },
+        { stack: 98, hole: '2c 3d', streetCommitted: 2 },
+        { stack: 95, hole: '5c 6d', streetCommitted: 5 },
+      ],
+      street: 'preflop',
+      currentBet: 5,
+      buttonSeat: 2,
+      actorSeat: 0,
+    });
+    return makeBotView(state, 0);
+  };
+
+  it('opens the top share of Hands its personality claims, and no more', () => {
+    // Weighted by combinations, because that is what a percentile is a share of.
+    // This is the property the constant is *for*: "the top 10%" has to mean the
+    // top 10%, or the number is decoration.
+    const combinationsFor = (label: string): number =>
+      label.length === 2 ? 6 : label[2] === 's' ? 4 : 12;
+
+    for (const personality of everyPersonality) {
+      let opened = 0;
+      for (const label of allCanonicalLabels()) {
+        const view = firstIn(`${label[0]}h ${label[1]}${label[2] === 's' ? 'h' : 'd'}`);
+        const { reasons } = explainDecision(view, personality, 0.5, seededRng(1));
+        if (reasons.wantsToRaise) opened += combinationsFor(label);
+      }
+      expect(opened / 1326, personality.key).toBeLessThanOrEqual(personality.openingRange);
+      expect(opened, `${personality.key} opens nothing at all`).toBeGreaterThan(0);
+    }
+  });
+
+  it('never opens a random Hand simply because it is above average', () => {
+    // The old standard was an even share of the pot plus a margin. Six-handed
+    // that is 0.167, which is by definition the Equity of a random Hand, so a
+    // small margin on top said "raise with anything above average".
+    for (const personality of everyPersonality) {
+      const { reasons } = explainDecision(firstIn('7h 2d'), personality, 0.9, seededRng(1));
+      expect(reasons.wantsToRaise, `${personality.key} raises 7-2`).toBe(false);
+    }
+  });
+
+  it('tightens the range as the price climbs, so a raising war can end', () => {
+    // First in, the whole range opens. Against a raise only its strongest part
+    // does — otherwise a Hand that clears the range re-raises for ever, and a
+    // 20 BB table cannot survive that.
+    const facingARaise = (hole: string, currentBet: number): BotView => {
+      const state = positionAt({
+        seats: [
+          { stack: 100, hole, streetCommitted: 5, committed: 5 },
+          { stack: 100 - currentBet, hole: '2c 3d', streetCommitted: currentBet },
+        ],
+        street: 'preflop',
+        currentBet,
+        actorSeat: 0,
+      });
+      return makeBotView(state, 0);
+    };
+    // A middling suited ace opens first in for the Bluffer, but folds to a
+    // four-bet. Aces raise whatever the price.
+    const opens = (hole: string, bet: number) =>
+      explainDecision(facingARaise(hole, bet), PERSONALITIES.Bluffer, 0.5, seededRng(1)).reasons
+        .wantsToRaise;
+    expect(opens('Ah 8h', 5)).toBe(true);
+    expect(opens('Ah 8h', 40)).toBe(false);
+    expect(opens('Ah As', 40)).toBe(true);
+  });
+
+  it('never folds a Hand it was simultaneously strong enough to raise with', () => {
+    // The contradiction: the fold test used to run first, and before the flop the
+    // calling threshold is the higher of the two — so a Hand strong enough to
+    // raise got folded instead. It held in 54.2% of preflop decisions and threw
+    // away 14.0% of every preflop fold in the game.
+    let checked = 0;
+    for (const personality of everyPersonality) {
+      for (const label of allCanonicalLabels()) {
+        const view = firstIn(`${label[0]}h ${label[1]}${label[2] === 's' ? 'h' : 'd'}`);
+        for (let seed = 0; seed < 3; seed++) {
+          const { action, reasons } = explainDecision(view, personality, 0.4, seededRng(seed));
+          checked += 1;
+          if (action.type !== 'fold') continue;
+          expect(reasons.wantsToRaise, `${personality.key} folded ${label}`).toBe(false);
+        }
+      }
+    }
+    expect(checked).toBeGreaterThan(2000);
+  });
+
+  it('leaves the standard after the flop alone, where it is well behaved', () => {
+    // Postflop the calling threshold is the lower of the two at every price
+    // measured, so the contradiction never arose there and nothing about the
+    // even-share form needs replacing.
+    const view = viewFacing({ potTotal: 60, callAmount: 20 });
+    for (const personality of everyPersonality) {
+      const { reasons } = explainDecision(view, personality, 0.9, seededRng(2));
+      expect(reasons.startingHandPercentile, personality.key).toBeNull();
+      expect(reasons.raiseThreshold, personality.key).toBeCloseTo(
+        1 / 3 + personality.raiseMargin,
+        9,
+      );
+    }
+  });
+});
+
 describe('the personalities differ in the right direction', () => {
-  /** Play the same spread of spots many times and count what happened. */
+  /**
+   * Deal every one of the 169 starting Hands, weighted by how often it is
+   * actually dealt, and count what happened.
+   *
+   * The sweep is over Hands rather than over Equity because before the flop the
+   * entry standard is an Opening Range: a Bot looks at its two cards, not at a
+   * number. Sweeping Equity against one fixed holding would now measure nothing.
+   */
   function tendencies(key: PersonalityKey) {
     const personality = PERSONALITIES[key];
     let entered = 0;
     let raised = 0;
     let decisions = 0;
 
-    for (let seed = 0; seed < 400; seed++) {
-      const rng = seededRng(seed * 7919 + 13);
+    for (const label of allCanonicalLabels()) {
+      const hole = `${label[0]}h ${label[1]}${label[2] === 's' ? 'h' : 'd'}`;
+      const weight = label.length === 2 ? 6 : label[2] === 's' ? 4 : 12;
       // A realistic preflop price: 3 in the pot, 2 to call.
-      const view = viewFacing({ potTotal: 3, callAmount: 2, street: 'preflop' });
-      const equity = 0.1 + (seed % 50) * 0.012; // a sweep of hand strengths
-      const action = decideWithEquity(view, personality, equity, rng);
-      decisions++;
-      if (action.type !== 'fold') entered++;
-      if (action.type === 'raise' || action.type === 'bet' || action.type === 'all-in') raised++;
+      const view = viewFacing({ potTotal: 3, callAmount: 2, street: 'preflop', hole });
+      const equity = lookupPreflop(label, view.opponentCount)!.equity;
+
+      for (let seed = 0; seed < 4; seed++) {
+        const action = decideWithEquity(view, personality, equity, seededRng(seed * 7919 + 13));
+        decisions += weight;
+        if (action.type !== 'fold') entered += weight;
+        if (action.type === 'raise' || action.type === 'bet' || action.type === 'all-in') {
+          raised += weight;
+        }
+      }
     }
     return { entryRate: entered / decisions, raiseRate: raised / decisions };
   }
@@ -274,12 +396,12 @@ describe('bet sizing', () => {
 
 describe('the big blind’s option', () => {
   /** Everyone limps to the big blind, who may check or raise but not "bet". */
-  const bigBlindOption = (): BotView => {
+  const bigBlindOption = (hole = 'Ah As'): BotView => {
     const state = positionAt({
       seats: [
         { stack: 198, hole: '3c 4d', streetCommitted: 2, hasActed: true },
         { stack: 199, hole: '5c 6d', streetCommitted: 2, hasActed: true },
-        { stack: 198, hole: 'Ah As', streetCommitted: 2 }, // the big blind
+        { stack: 198, hole, streetCommitted: 2 }, // the big blind
         { stack: 198, hole: '7c 8d', streetCommitted: 2, hasActed: true },
       ],
       street: 'preflop',
@@ -315,7 +437,9 @@ describe('the big blind’s option', () => {
   });
 
   it('still takes the free card with a weak hand', () => {
-    const view = bigBlindOption();
+    // 9-4 offsuit is outside every personality's Opening Range, so the only
+    // aggression left here is the bluff roll.
+    const view = bigBlindOption('9h 4d');
     for (const personality of everyPersonality) {
       const actions = Array.from({ length: 200 }, (_, seed) =>
         decideWithEquity(view, personality, 0.08, seededRng(seed)).type,

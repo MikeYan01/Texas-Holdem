@@ -6,10 +6,15 @@
 // Equity is enough; an absolute threshold throws that pot away, and a human
 // spots that inside a few Hands.
 //
-// The five personalities are constants added to that one comparison. There is no
+// The standard for *raising* is a separate question from the standard for
+// calling, and before the flop it is not an Equity number at all: it is an
+// Opening Range, the top share of the 169 starting Hands this personality plays.
+//
+// The five personalities are constants on that one comparison. There is no
 // branch on which Bot is deciding.
 
 import type { PlayerAction } from '../engine/types.ts';
+import { startingHandPercentile } from '../poker-math/preflop-equity.ts';
 import type { BotDeps, BotView, Personality } from './types.ts';
 
 const clamp = (value: number, low: number, high: number): number =>
@@ -66,8 +71,11 @@ export type DecisionReasons = {
   readonly equity: number;
   readonly potOdds: number;
   readonly callThreshold: number;
+  /** The Equity a raise asks for after the flop. Not consulted before it. */
   readonly raiseThreshold: number;
-  /** Equity cleared the raising standard, so aggression here is a value bet. */
+  /** Where the starting Hand ranked, before the flop. Null after it. */
+  readonly startingHandPercentile: number | null;
+  /** The raising standard was cleared, so aggression here is a value bet. */
   readonly wantsToRaise: boolean;
   /** The bluff roll came in. Says nothing about whether aggression was legal. */
   readonly bluffing: boolean;
@@ -147,12 +155,30 @@ export function explainDecision(
     view.street === 'preflop' ? personality.preflopCallMargin : personality.postflopCallMargin;
   const callThreshold = callThresholdFor(odds, callMargin);
 
-  // An even share of the pot is the reference point for betting: with more than
-  // your share of the Equity, betting is the profitable move.
-  const evenShare = 1 / (view.opponentCount + 1);
-  const raiseThreshold = evenShare + personality.raiseMargin;
+  // After the flop, an even share of the pot is the reference point for betting:
+  // with more than your share of the Equity, betting is the profitable move.
+  const raiseThreshold = 1 / (view.opponentCount + 1) + personality.raiseMargin;
 
-  const wantsToRaise = equity >= raiseThreshold;
+  // Before the flop it is not, because an even share six-handed is 0.167, which
+  // is by definition the Equity of a random Hand. So the standard there is an
+  // Opening Range: the top share of the 169 starting Hands this personality
+  // plays, which is how a human states an entry range and what it actually means.
+  //
+  // The range tightens with the price, for the same reason the calling cushion
+  // loosens with it. First in, the whole range opens; against a raise to three
+  // big blinds only its strongest third does, and against a re-raise less again.
+  // A range that ignored the price would say "raise the top 42% of Hands" at the
+  // fourth raise as readily as at the first, and a 20 BB table does not survive
+  // that — measured, Rebuys nearly tripled.
+  const openingRange =
+    (personality.openingRange * view.bigBlind) / Math.max(view.bigBlind, view.currentBet);
+
+  const percentile =
+    view.street === 'preflop'
+      ? startingHandPercentile(view.holeCards[0], view.holeCards[1])
+      : null;
+
+  const wantsToRaise = percentile === null ? equity >= raiseThreshold : percentile <= openingRange;
   // A bluff only pays when everybody folds, so its value falls away as the
   // table grows. Firing into five opponents as often as into one is the
   // difference between an aggressive style and a losing one.
@@ -172,6 +198,7 @@ export function explainDecision(
       potOdds: odds,
       callThreshold,
       raiseThreshold,
+      startingHandPercentile: percentile,
       wantsToRaise,
       bluffing,
       aggressive: false,
@@ -194,6 +221,7 @@ export function explainDecision(
         potOdds: odds,
         callThreshold,
         raiseThreshold,
+        startingHandPercentile: percentile,
         wantsToRaise,
         bluffing,
         aggressive: true,
@@ -213,18 +241,21 @@ export function explainDecision(
     return passive({ type: 'check' });
   }
 
+  // The raise test comes *before* the fold test, and the order is the whole
+  // point. Before the flop the calling threshold is the higher of the two — TAG
+  // needs 0.557 Equity to call when first in and 0.267 to raise — so testing the
+  // fold first folds Hands that were strong enough to raise. Measured, that
+  // contradiction held in 54.2% of preflop decisions and threw away 14.0% of
+  // every preflop fold in the game.
+  if (wantsToRaise && canOpen) return fire(false);
+
   if (equity < callThreshold) {
     // Even a hand with nothing takes the pot often enough to be worth firing at
     // sometimes; this is where the Bluffer picks up pots with 7-2.
-    //
-    // Aggression from here is bluff-driven whatever `wantsToRaise` says, because
-    // the raise test below was never reached: the roll is the entire reason
-    // chips went in.
     if (bluffing && rng() < 0.5 && canOpen) return fire(true);
     return passive({ type: 'fold' });
   }
 
-  if (wantsToRaise && canOpen) return fire(false);
   return passive(legal.canCall ? { type: 'call' } : { type: 'check' });
 }
 

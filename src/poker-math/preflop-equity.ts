@@ -18,6 +18,8 @@
 // through a bundler, and the engine side is meant to run anywhere a plain
 // JavaScript runtime does.
 import table from './preflop-equity-table.json' with { type: 'json' };
+import { allCanonicalLabels, canonicalHandLabel } from './starting-hands.ts';
+import type { Card } from './cards.ts';
 
 /** What one cell of the table says. */
 export type PreflopCell = {
@@ -56,6 +58,74 @@ export function lookupPreflop(label: string, opponentCount: number): PreflopCell
   const [equity, win, tie] = cell;
   if (equity === undefined || win === undefined || tie === undefined) return undefined;
   return { equity, win, tie };
+}
+
+/** The 1326 ways to be dealt two cards, which is what a percentile is a share of. */
+const TOTAL_COMBINATIONS = 1326;
+
+/** How many of those 1326 a canonical label stands for. They sum to 1326. */
+function combinationsFor(label: string): number {
+  if (label.length === 2) return 6;
+  return label[2] === 's' ? 4 : 12;
+}
+
+let ranking: ReadonlyMap<string, number> | null = null;
+
+/**
+ * The 169 starting Hands ranked strongest-first, each carrying the share of all
+ * holdings it is at least as good as — so AA is the top 0.45%, and a percentile
+ * of 0.15 means "inside the top 15% of Hands", which is how the phrase is meant.
+ *
+ * Ranked on **heads-up** Equity, which is the basis on which "the top 15% of
+ * Hands" is normally said. A six-handed ranking would shift with the number of
+ * opponents, and an entry standard that moved every time somebody folded would
+ * not be a range at all.
+ *
+ * Weighted by combinations rather than by label, because that is what makes the
+ * number mean what it says: AA is one of 169 labels but only 0.45% of holdings,
+ * so a Bot playing "the top 5%" that treated labels as equal would be playing
+ * nearly twice the Hands it claimed.
+ */
+function buildRanking(): ReadonlyMap<string, number> {
+  const sorted = allCanonicalLabels()
+    .map((label) => ({ label, equity: lookupPreflop(label, 1)?.equity ?? 0 }))
+    // Ties broken by label so the ranking is stable across runs and platforms.
+    .sort((a, b) => b.equity - a.equity || (a.label < b.label ? -1 : 1));
+
+  const percentiles = new Map<string, number>();
+  let cumulative = 0;
+  for (const { label } of sorted) {
+    cumulative += combinationsFor(label);
+    percentiles.set(label, cumulative / TOTAL_COMBINATIONS);
+  }
+  return percentiles;
+}
+
+/**
+ * Where these two cards sit among all starting Hands: the share of holdings this
+ * one is at least as good as. **The strongest Hands are nearest zero**, so
+ * `percentile <= 0.15` is exactly "this is in the top 15%".
+ *
+ * The cumulative share includes this Hand's own class, which is what makes that
+ * comparison exact rather than approximate: a Bot playing the top 15% opens at
+ * most 15% of holdings, never the 15.8% it would if the class straddling the cut
+ * were counted as inside.
+ *
+ * This is the Bot's own two cards ranked against the deck, not a model of what
+ * anyone else might hold — the road ADR-0003 keeps shut.
+ */
+export function startingHandPercentile(a: Card, b: Card): number {
+  ranking ??= buildRanking();
+  const label = canonicalHandLabel(a, b);
+  const percentile = ranking.get(label);
+  if (percentile === undefined) throw new Error(`no preflop ranking for ${label}`);
+  return percentile;
+}
+
+/** The whole ranking, strongest-first. For tests and for offline inspection. */
+export function startingHandRanking(): readonly { label: string; percentile: number }[] {
+  ranking ??= buildRanking();
+  return [...ranking].map(([label, percentile]) => ({ label, percentile }));
 }
 
 export { allCanonicalLabels, canonicalHandLabel, representativeCards } from './starting-hands.ts';

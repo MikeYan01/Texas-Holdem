@@ -136,6 +136,20 @@ The minimum Equity that makes calling mathematically worthwhile: the call divide
 raise.
 _Avoid_: odds, 赔率 on its own (it does not say which side you are on)
 
+**Opening Range(开局范围)**:
+The share of the 169 starting Hands a Bot will put chips in with **as a raise** before the
+flop, expressed as a percentile of all 1326 holdings ranked on heads-up Equity — "the top
+10%". It is the preflop half of passive-versus-aggressive, and it replaced an even share of
+the pot, which six-handed is 0.167 and therefore by definition the Equity of a random Hand:
+a small margin on top of that said "raise with anything above average", which is not an
+entry standard at all. The range tightens with the price, so a Hand that opens first in
+does not re-raise for ever. Position shifts it: later opens wider.
+
+Note that this is a Bot ranking **its own two cards**, and nothing else. Say "Opening
+Range" in full and never "range" bare, because a bare range is what a solver builds for its
+*opponent*, and that is the road ADR-0003 keeps shut.
+_Avoid_: range, 范围, 手牌范围 (all of which read as opponent range modelling)
+
 **Kicker(踢脚)**:
 The spare card that separates two hands of the same category. Two Seats each holding a pair
 of aces are separated by their kickers; if those match too, they split the pot. The
