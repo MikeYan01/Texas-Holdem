@@ -98,6 +98,31 @@ const LED_LAST_STREET = 2.5;
 const KEEPS_TELLING_THE_STORY = 4;
 
 /**
+ * What Position does to an Opening Range: the multiplier under the gun and the
+ * multiplier on the Button.
+ *
+ * A human opens far more Hands from late Position, because acting last for the
+ * rest of the Hand is worth real money. The two ends average to one, so shifting
+ * the range by Position does not quietly widen the whole table.
+ */
+const RANGE_UNDER_THE_GUN = 0.5;
+const RANGE_ON_THE_BUTTON = 1.5;
+
+/**
+ * And how much more often a Bot bluffs when it acts last: at 1, twice as often
+ * on the Button as under the gun. Acting last is when a bluff works, because
+ * everybody else has already said what they think of the pot.
+ */
+const BLUFFS_MORE_IN_POSITION = 1;
+
+/**
+ * However many reasons a Bot has to fire, it must never become certain to fire.
+ * A Bot that always bets the river is not aggressive, it is a lookup table, and
+ * a Player reads it inside two Sessions.
+ */
+const NEVER_A_CERTAINTY = 0.65;
+
+/**
  * How much Equity a raise asks for after the flop: an even share of the pot plus
  * this personality's margin, capped so it can never demand a near-lock.
  *
@@ -243,8 +268,14 @@ export function explainDecision(
   // A range that ignored the price would say "raise the top 42% of Hands" at the
   // fourth raise as readily as at the first, and a 20 BB table does not survive
   // that — measured, Rebuys nearly tripled.
+  // Position widens it: on the Button a Bot enters with half again as many Hands
+  // as it would under the gun. This is the one thing at this table a Player can
+  // watch for, work out, and then exploit.
+  const byPosition =
+    RANGE_UNDER_THE_GUN + (RANGE_ON_THE_BUTTON - RANGE_UNDER_THE_GUN) * view.position;
   const openingRange =
-    (personality.openingRange * view.bigBlind) / Math.max(view.bigBlind, view.currentBet);
+    (personality.openingRange * byPosition * view.bigBlind) /
+    Math.max(view.bigBlind, view.currentBet);
 
   const percentile =
     view.street === 'preflop'
@@ -256,13 +287,18 @@ export function explainDecision(
   // table grows. Firing into five opponents as often as into one is the
   // difference between an aggressive style and a losing one.
   //
-  // A Bot that led last Street leans on the roll again, in proportion to the
-  // Upside still in its Hand. That is what turns a bluff into a story: it keeps
-  // firing while the Hand can still get there, and gives up when it cannot — so
-  // the give-up stops being a confession, because the Player cannot see which
-  // happened.
-  const continuation = view.wasAggressor ? LED_LAST_STREET + KEEPS_TELLING_THE_STORY * handUpside : 0;
-  const bluffing = rng() < (personality.bluffFrequency * (1 + continuation)) / view.opponentCount;
+  // Two independent reasons to fire, and they add rather than compound. Leading
+  // last Street turns a bluff into a story: the Bot keeps firing while the Hand
+  // can still get there, and gives up when it cannot, so the give-up stops being
+  // a confession — the Player cannot see which of the two just checked. Acting
+  // last is the other, because that is when a bluff works.
+  const continuation = view.wasAggressor
+    ? LED_LAST_STREET + KEEPS_TELLING_THE_STORY * handUpside
+    : 0;
+  const inPosition = BLUFFS_MORE_IN_POSITION * view.position;
+  const bluffChance =
+    (personality.bluffFrequency * (1 + continuation + inPosition)) / view.opponentCount;
+  const bluffing = rng() < Math.min(bluffChance, NEVER_A_CERTAINTY);
   // "Bet" and "raise" are the same decision to a Bot; which word the engine wants
   // depends only on whether anything has been bet yet. Checking `canBet` alone
   // would silently skip the one spot where checking and raising are both legal —

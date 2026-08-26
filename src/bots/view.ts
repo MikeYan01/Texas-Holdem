@@ -27,10 +27,32 @@ export function makeBotView(state: SessionState, seatIndex: number): BotView {
     opponentCount: state.seats.filter((other) => !other.folded && other.index !== seatIndex).length,
     currentBet: state.currentBet,
     stack: seat.stack,
+    position: positionOf(state, seatIndex),
     wasAggressor: state.lastStreetAggressor === seatIndex,
     bigBlind: state.config.bigBlind,
     legalActions: state.legalActions,
   };
+}
+
+/**
+ * How late a Seat acts among those still in the Hand: 0 first, 1 last.
+ *
+ * Measured on the order used after the flop — clockwise from the Button — which
+ * is the order that decides three Streets out of four. Before the flop the
+ * blinds act last on that one Street, but they are out of position for the rest
+ * of the Hand, and it is the rest of the Hand that makes the Button the best
+ * Seat to enter a pot from.
+ */
+function positionOf(state: SessionState, seatIndex: number): number {
+  const n = state.config.seatCount;
+  const live: number[] = [];
+  for (let i = 0; i < n; i++) {
+    const index = (state.buttonSeat + 1 + i) % n;
+    if (!state.seats[index]!.folded) live.push(index);
+  }
+  const place = live.indexOf(seatIndex);
+  if (place < 0 || live.length < 2) return 1;
+  return place / (live.length - 1);
 }
 
 /**

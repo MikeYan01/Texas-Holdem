@@ -548,18 +548,125 @@ describe('a bluff that remembers the Street before', () => {
   it('fires harder still when the Hand can still get there', () => {
     // A live flush draw against a busted one, both continuing. This is what stops
     // the give-up being a confession: the Player cannot see which just checked.
+    //
+    // Measured on the tightest of the aggressive personalities, because the
+    // loosest are already at the ceiling that stops any Bot becoming certain to
+    // fire, and two numbers pinned to the same ceiling compare nothing.
     const live = onTheTurn({ hole: 'Ah 7h', board: 'Kh 4h 2c Td', led: true });
     const dead = onTheTurn({ hole: 'Qh 4d', board: '9c 7s 2h Td', led: true });
-    expect(firesWithNothing(live, 'LAG')).toBeGreaterThan(firesWithNothing(dead, 'LAG'));
+    expect(firesWithNothing(live, 'TAG')).toBeGreaterThan(firesWithNothing(dead, 'TAG'));
   });
 
   it('does not lean on a story it never started', () => {
     // Upside alone must not continue anything for a Seat that checked the flop,
     // or the record would be decoration.
     const board = 'Kh 4h 2c Td';
-    expect(firesWithNothing(onTheTurn({ hole: 'Ah 7h', board, led: false }), 'LAG')).toBeLessThan(
-      firesWithNothing(onTheTurn({ hole: 'Ah 7h', board, led: true }), 'LAG'),
+    expect(firesWithNothing(onTheTurn({ hole: 'Ah 7h', board, led: false }), 'TAG')).toBeLessThan(
+      firesWithNothing(onTheTurn({ hole: 'Ah 7h', board, led: true }), 'TAG'),
     );
+  });
+});
+
+describe('Position, which the Bots could never see before', () => {
+  /** Six Seats, Button on `buttonSeat`, `folded` already out of the Hand. */
+  const table = (buttonSeat: number, folded: readonly number[] = []) =>
+    positionAt({
+      seats: Array.from({ length: 6 }, (_, index) => ({
+        stack: 100,
+        hole: 'Ah Kd',
+        folded: folded.includes(index),
+        streetCommitted: 0,
+      })),
+      street: 'flop',
+      board: '2h 7s 9c',
+      currentBet: 0,
+      buttonSeat,
+      actorSeat: (buttonSeat + 1) % 6,
+    });
+
+  it('puts the Seat left of the Button first and the Button last', () => {
+    const state = table(0);
+    expect(makeBotView(state, 1).position).toBe(0);
+    expect(makeBotView({ ...state, legalActions: { ...state.legalActions!, seat: 0 } }, 0).position) //
+      .toBe(1);
+  });
+
+  it('is derived from who is still in, not from the seat number', () => {
+    // Everyone between this Seat and the Button folds: it is now last to act,
+    // whatever its index says. Position is not a seat number (CONTEXT.md).
+    const state = table(0, [4, 5, 0]);
+    const view = makeBotView({ ...state, legalActions: { ...state.legalActions!, seat: 3 } }, 3);
+    expect(view.position).toBe(1);
+  });
+
+  it('moves with the Button, Hand by Hand', () => {
+    const positionOfSeatOne = (buttonSeat: number) => {
+      const state = table(buttonSeat);
+      return makeBotView({ ...state, legalActions: { ...state.legalActions!, seat: 1 } }, 1)
+        .position;
+    };
+    expect(positionOfSeatOne(0)).toBe(0);
+    expect(positionOfSeatOne(1)).toBe(1);
+    expect(positionOfSeatOne(2)).toBeCloseTo(4 / 5, 9);
+  });
+
+  it('opens a wider range on the Button than under the gun', () => {
+    // The gap is the whole point: it is something a Player can watch for, work
+    // out, and then exploit, which is the most valuable thing at this table.
+    const openingRate = (key: PersonalityKey, position: number) => {
+      let opened = 0;
+      let dealt = 0;
+      for (const label of allCanonicalLabels()) {
+        const hole = `${label[0]}h ${label[1]}${label[2] === 's' ? 'h' : 'd'}`;
+        const weight = label.length === 2 ? 6 : label[2] === 's' ? 4 : 12;
+        const view = { ...viewFacing({ potTotal: 3, callAmount: 2, street: 'preflop', hole }), position };
+        dealt += weight;
+        if (explainDecision(view, PERSONALITIES[key], 0.4, seededRng(1)).reasons.wantsToRaise) {
+          opened += weight;
+        }
+      }
+      return opened / dealt;
+    };
+
+    for (const key of PERSONALITY_KEYS) {
+      const onTheButton = openingRate(key, 1);
+      const underTheGun = openingRate(key, 0);
+      expect(onTheButton, `${key} on the Button`).toBeGreaterThan(underTheGun);
+      // And the range still means what it says at the widest end.
+      expect(onTheButton, `${key} opens more than its range allows`).toBeLessThanOrEqual(
+        PERSONALITIES[key].openingRange * 1.5,
+      );
+    }
+  });
+
+  it('bluffs more often when it acts last', () => {
+    const bluffRate = (position: number) => {
+      const view = { ...viewFacing({ potTotal: 60, callAmount: 0 }), position };
+      let fired = 0;
+      for (let seed = 0; seed < 600; seed++) {
+        if (decideWithEquity(view, PERSONALITIES.LAG, 0.06, seededRng(seed)).type !== 'check') {
+          fired += 1;
+        }
+      }
+      return fired / 600;
+    };
+    expect(bluffRate(1)).toBeGreaterThan(bluffRate(0));
+  });
+
+  it('never becomes certain to fire, however many reasons it has', () => {
+    // Led last Street, acting last, and the loosest personality at the table. A
+    // Bot that always bets here is not aggressive, it is a lookup table.
+    const view = {
+      ...viewFacing({ potTotal: 60, callAmount: 0 }),
+      position: 1,
+      wasAggressor: true,
+      opponentCount: 1,
+    };
+    const checks = Array.from(
+      { length: 400 },
+      (_, seed) => decideWithEquity(view, PERSONALITIES.Bluffer, 0.06, seededRng(seed)).type,
+    ).filter((type) => type === 'check').length;
+    expect(checks).toBeGreaterThan(0);
   });
 });
 
@@ -765,6 +872,7 @@ describe('a Bot cannot see what it should not', () => {
       'opponentCount',
       'currentBet',
       'stack',
+      'position',
       'wasAggressor',
       'bigBlind',
       'legalActions',

@@ -85,6 +85,17 @@ export type BotView = {
   readonly currentBet: number;
   readonly stack: number;
   /**
+   * How late this Seat acts among the Seats still in the Hand: **0 is first to
+   * act, 1 is last**. Derived from the Button and the set of unfolded Seats.
+   *
+   * Acting last is worth real money — you see what everyone else does before you
+   * decide — which is why a human opens far more Hands on the Button than under
+   * the gun. Everything needed to work this out has been in the Session state
+   * since the beginning; it had simply never reached the Bots, which is a large
+   * part of how "they do not read the situation" became true.
+   */
+  readonly position: number;
+  /**
    * This Seat led the betting on the Street that just finished. Public
    * information: every Seat at the table watched it happen.
    *
