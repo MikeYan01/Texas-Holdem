@@ -123,6 +123,25 @@ const BLUFFS_MORE_IN_POSITION = 1;
 const NEVER_A_CERTAINTY = 0.65;
 
 /**
+ * Below this many big blinds, a Stack is short enough that grinding it down
+ * through folds is a slow death and taking a shot with it becomes legitimate
+ * poker. At the line itself nobody gambles; with nothing left, everybody with
+ * the appetite for it does.
+ */
+const A_SHORT_STACK = 10;
+
+/**
+ * And how much a Hand has to be worth, once Stack depth and appetite are taken
+ * into account, before a push is worth taking.
+ *
+ * A threshold rather than a roll, because a roll selects far too weakly: mean
+ * Upside behind a push came out at 9% against 8% for short-Stack spots generally,
+ * so the push did not read as considered at all. At a threshold it is 22% for the
+ * tightest personality that gambles.
+ */
+const WORTH_A_SHOT = 0.1;
+
+/**
  * How much Equity a raise asks for after the flop: an even share of the pot plus
  * this personality's margin, capped so it can never demand a near-lock.
  *
@@ -174,6 +193,8 @@ export type DecisionReasons = {
   /** It wanted more than it holds, so the legal maximum decided the action. */
   readonly clampedDown: boolean;
   readonly allIn: boolean;
+  /** The push was a decision, not the legal maximum deciding for the Bot. */
+  readonly chosenGamble: boolean;
   /** Chips over and above the call, as a share of the pot being bet into. */
   readonly sizeFraction: number | null;
 };
@@ -306,6 +327,22 @@ export function explainDecision(
   // time.
   const canOpen = legal.canBet || legal.canRaise;
 
+  // A push the Bot chooses, rather than one the arithmetic forced on it.
+  //
+  // Pushing has to actually be a push: where the Stack cannot cover the current
+  // bet, "all-in" is only the engine's word for calling with everything, and
+  // calling off a Stack is the fold decision, which the price still governs.
+  const pushWouldLead = legal.canAllIn && legal.maxRaiseTo > view.currentBet;
+  // How short, as a share: 0 at the line, 1 with nothing left. Measured on the
+  // effective Stack, since chips an opponent cannot cover are never at stake.
+  const shortness = Math.max(0, 1 - view.effectiveStack / (A_SHORT_STACK * view.bigBlind));
+  // Upside decides it, not Stack depth: "the nut flush or nothing" is worth a
+  // shot and "spread across weak pairs" is not, even where the two hold exactly
+  // the same Equity. A threshold rather than a roll, because a roll selects far
+  // too weakly — the mean Upside behind a push came out barely above the mean
+  // for short-Stack spots generally, so the push did not read as considered.
+  const gambling = handUpside * personality.gambleAppetite * shortness >= WORTH_A_SHOT;
+
   const passive = (action: PlayerAction): Decision => ({
     action,
     reasons: {
@@ -324,6 +361,7 @@ export function explainDecision(
       raiseTo: null,
       clampedDown: false,
       allIn: false,
+      chosenGamble: false,
       sizeFraction: null,
     },
   });
@@ -348,14 +386,47 @@ export function explainDecision(
         raiseTo: sized.raiseTo,
         clampedDown: sized.intendedRaiseTo > legal.maxRaiseTo,
         allIn: sized.action.type === 'all-in',
+        chosenGamble: false,
         sizeFraction:
           (sized.raiseTo - view.currentBet) / Math.max(1, view.potTotal + legal.callAmount),
       },
     };
   };
 
+  /** Everything in, on purpose. The Stack is the size, so there is none to draw. */
+  const push = (bluffDriven: boolean): Decision => ({
+    action: { type: 'all-in' },
+    reasons: {
+      trueEquity,
+      equity,
+      potOdds: odds,
+      callThreshold,
+      raiseThreshold,
+      upside: handUpside,
+      startingHandPercentile: percentile,
+      wantsToRaise,
+      bluffing,
+      aggressive: true,
+      bluffDriven,
+      intendedRaiseTo: legal.maxRaiseTo,
+      raiseTo: legal.maxRaiseTo,
+      clampedDown: false,
+      allIn: true,
+      chosenGamble: true,
+      sizeFraction:
+        (legal.maxRaiseTo - view.currentBet) / Math.max(1, view.potTotal + legal.callAmount),
+    },
+  });
+
+  // Raising is not legal at this depth — the Stack cannot cover a full raise —
+  // but the right to push never goes away, so pushing is what raising means here.
+  if (pushWouldLead && !canOpen && (wantsToRaise || gambling)) {
+    return push(!wantsToRaise);
+  }
+
   if (legal.canCheck) {
     if ((wantsToRaise || bluffing) && canOpen) return fire(!wantsToRaise);
+    if (gambling && pushWouldLead) return push(!wantsToRaise);
     return passive({ type: 'check' });
   }
 
@@ -371,6 +442,7 @@ export function explainDecision(
     // Even a hand with nothing takes the pot often enough to be worth firing at
     // sometimes; this is where the Bluffer picks up pots with 7-2.
     if (bluffing && rng() < 0.5 && canOpen) return fire(true);
+    if (gambling && pushWouldLead) return push(true);
     return passive({ type: 'fold' });
   }
 

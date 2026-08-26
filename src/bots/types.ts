@@ -53,6 +53,13 @@ export type Personality = {
    */
   readonly semiBluffAppetite: number;
   /**
+   * How readily this Bot will take a shot with a short Stack. Multiplied by
+   * Upside, so the push is justified by what the Hand could still become rather
+   * than by the Stack alone — and the constants genuinely differ, because a
+   * Player has to be able to learn who gambles and who refuses.
+   */
+  readonly gambleAppetite: number;
+  /**
    * How badly this Bot misreads its own Equity. Bots must not play off a perfect
    * number: they would call too much and read as mechanical (ADR-0005). The noise
    * also makes the sampling error of 2000 iterations harmless.
@@ -84,6 +91,15 @@ export type BotView = {
   readonly opponentCount: number;
   readonly currentBet: number;
   readonly stack: number;
+  /**
+   * The smaller of this Seat's Stack and the largest Stack still in the Hand
+   * against it. It is what can actually be won or lost, and therefore the honest
+   * measure of how short a Seat really is: 20 BB against an opponent holding 4 is
+   * a 4 BB pot, not a 20 BB one.
+   *
+   * Public information — the chips are on the table in front of everyone.
+   */
+  readonly effectiveStack: number;
   /**
    * How late this Seat acts among the Seats still in the Hand: **0 is first to
    * act, 1 is last**. Derived from the Button and the set of unfolded Seats.

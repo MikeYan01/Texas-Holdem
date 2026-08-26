@@ -87,6 +87,7 @@ const checkingWith = (trueEquity: number): DecisionReasons => ({
   raiseTo: null,
   clampedDown: false,
   allIn: false,
+  chosenGamble: false,
   sizeFraction: null,
 });
 

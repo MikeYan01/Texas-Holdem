@@ -27,11 +27,27 @@ export function makeBotView(state: SessionState, seatIndex: number): BotView {
     opponentCount: state.seats.filter((other) => !other.folded && other.index !== seatIndex).length,
     currentBet: state.currentBet,
     stack: seat.stack,
+    effectiveStack: effectiveStackFor(state, seatIndex),
     position: positionOf(state, seatIndex),
     wasAggressor: state.lastStreetAggressor === seatIndex,
     bigBlind: state.config.bigBlind,
     legalActions: state.legalActions,
   };
+}
+
+/**
+ * What is actually at stake: the smaller of this Seat's Stack and the largest
+ * one still in the Hand against it. Holding 20 BB against an opponent with 4
+ * makes this a 4 BB pot, and a Bot that read its own Stack alone would think it
+ * had a decision it does not have.
+ */
+function effectiveStackFor(state: SessionState, seatIndex: number): number {
+  let largestOpponent = 0;
+  for (const other of state.seats) {
+    if (other.folded || other.index === seatIndex) continue;
+    largestOpponent = Math.max(largestOpponent, other.stack);
+  }
+  return Math.min(state.seats[seatIndex]!.stack, largestOpponent);
 }
 
 /**

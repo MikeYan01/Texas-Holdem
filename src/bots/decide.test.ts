@@ -670,6 +670,103 @@ describe('Position, which the Bots could never see before', () => {
   });
 });
 
+describe('a short Stack takes a shot, or refuses to', () => {
+  /**
+   * A Seat with `stack` chips on the turn, first to act into an unopened pot,
+   * against one opponent deep enough not to be the binding constraint.
+   */
+  const shortOnTheTurn = (hole: string, board: string, stack: number): BotView => {
+    const state = positionAt({
+      seats: [
+        { stack, hole, streetCommitted: 0, committed: 60 },
+        { stack: 400, hole: '2c 3d', streetCommitted: 0, committed: 60 },
+      ],
+      street: 'turn',
+      board,
+      currentBet: 0,
+      actorSeat: 0,
+    });
+    return makeBotView(state, 0);
+  };
+
+  const pushRate = (view: BotView, key: PersonalityKey): number => {
+    let pushes = 0;
+    for (let seed = 0; seed < 120; seed++) {
+      // 12% Equity: nothing here is a value bet. Anything that goes in is either
+      // the bluff roll or a considered gamble.
+      if (decideWithEquity(view, PERSONALITIES[key], 0.12, seededRng(seed)).type === 'all-in') {
+        pushes += 1;
+      }
+    }
+    return pushes / 120;
+  };
+
+  it('carries the effective Stack, which is what is really at risk', () => {
+    // 20 BB against an opponent holding 4 makes this a 4 BB pot.
+    const state = positionAt({
+      seats: [
+        { stack: 100, hole: 'Ah Kd' },
+        { stack: 20, hole: '2c 3d' },
+        { stack: 15, hole: '5c 6d', folded: true },
+      ],
+      street: 'flop',
+      board: '2h 7s 9c',
+      currentBet: 0,
+      actorSeat: 0,
+    });
+    const view = makeBotView(state, 0);
+    expect(view.stack).toBe(100);
+    expect(view.effectiveStack).toBe(20);
+  });
+
+  it('pushes a live draw and lets a dead Hand go', () => {
+    // Both Hands are handed 12% Equity. Only Upside tells them apart, which is
+    // the whole reason it exists.
+    const draw = shortOnTheTurn('Ah 7h', 'Kh 4h 2c Td', 15);
+    const dead = shortOnTheTurn('Qh 4d', '9c 7s 2h Td', 15);
+    expect(pushRate(draw, 'Bluffer')).toBeGreaterThan(0);
+    expect(pushRate(dead, 'Bluffer')).toBe(0);
+  });
+
+  it('will not gamble a Stack that is not short', () => {
+    // Grinding is a slow death only when there is little left to grind.
+    const draw = shortOnTheTurn('Ah 7h', 'Kh 4h 2c Td', 400);
+    expect(pushRate(draw, 'Bluffer')).toBe(0);
+  });
+
+  it('has somebody who gambles readily and somebody who refuses outright', () => {
+    // Differentiation is a hard requirement, not a nice-to-have: working out who
+    // does what is the most valuable thing there is to learn at this table.
+    const draw = shortOnTheTurn('Ah 7h', 'Kh 4h 2c Td', 15);
+    expect(pushRate(draw, 'Bluffer'), 'the Bluffer refused a shot').toBeGreaterThan(0);
+    expect(pushRate(draw, 'LAG'), 'the LAG refused a shot').toBeGreaterThan(0);
+    expect(pushRate(draw, 'Rock'), 'the Rock gambled').toBe(0);
+    expect(pushRate(draw, 'CallingStation'), 'the Calling Station gambled').toBe(0);
+  });
+
+  it('pushes rather than calling when raising is not legal but pushing is', () => {
+    // The right to push never goes away, so at a depth where no legal raise
+    // exists, pushing is what raising means. Before this, a Bot holding aces with
+    // under two big blinds behind called them off instead.
+    const state = positionAt({
+      seats: [
+        { stack: 8, hole: 'Ah As', streetCommitted: 0, committed: 5 },
+        { stack: 200, hole: '2c 3d', streetCommitted: 5, committed: 5 },
+      ],
+      street: 'preflop',
+      currentBet: 5,
+      actorSeat: 0,
+    });
+    const view = makeBotView(state, 0);
+    expect(view.legalActions.canRaise).toBe(false);
+    expect(view.legalActions.canAllIn).toBe(true);
+    for (const personality of everyPersonality) {
+      const action = decideWithEquity(view, personality, 0.85, seededRng(3));
+      expect(action.type, `${personality.key} did not push aces`).toBe('all-in');
+    }
+  });
+});
+
 describe('bet sizing', () => {
   it('varies rather than repeating one number', () => {
     const view = viewFacing({ potTotal: 60, callAmount: 0 });
@@ -872,6 +969,7 @@ describe('a Bot cannot see what it should not', () => {
       'opponentCount',
       'currentBet',
       'stack',
+      'effectiveStack',
       'position',
       'wasAggressor',
       'bigBlind',

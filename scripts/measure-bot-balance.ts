@@ -97,6 +97,15 @@ for (const b of behaviour.perPersonality) {
     ).join(''),
   );
 }
+console.log('\npersonality     chose the push   Upside behind it   Upside when short generally');
+for (const b of behaviour.perPersonality) {
+  console.log(
+    b.key.padEnd(15),
+    cell(String(b.chosenGambles), 12),
+    cell(b.chosenGambles === 0 ? '—' : pct(b.upsideAtPush), 18),
+    cell(pct(b.upsideWhenShort), 28),
+  );
+}
 console.log(
   `\nwhole table ${behaviour.allInsPerSession.toFixed(2)} all-ins per Session, ` +
     `${pct(behaviour.allInsFromShort)} of them from under 10 BB; ` +

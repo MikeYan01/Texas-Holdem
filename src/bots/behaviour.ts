@@ -56,6 +56,11 @@ export type PersonalityBehaviour = {
   readonly bigBetsWithAirPerSession: number;
   readonly allIns: number;
   readonly allInsPerSession: number;
+  /** All-ins the Bot chose, rather than ones the legal maximum chose for it. */
+  readonly chosenGambles: number;
+  /** Mean Upside behind a chosen push, against short-Stack spots generally. */
+  readonly upsideAtPush: number;
+  readonly upsideWhenShort: number;
   readonly byDepth: Readonly<Record<StackDepth, DepthTally>>;
   /** Share of all-ins pushed from under 10 BB. The 5.5x over-representation. */
   readonly allInsFromShort: number;
@@ -141,6 +146,10 @@ type Tally = {
   bigBetsWithAir: number;
   allIns: number;
   allInsFromShort: number;
+  chosenGambles: number;
+  upsideAtPush: number;
+  shortSpots: number;
+  upsideWhenShort: number;
   byDepth: Record<StackDepth, DepthTally>;
   clampedDown: number;
   twoBarrels: number;
@@ -221,6 +230,12 @@ export class BehaviourTally {
     const depth = t.byDepth[stackDepthOf(view.stack / view.bigBlind)];
     depth.decisions += 1;
 
+    // Measured on the effective Stack, which is what the push decision reads.
+    if (view.effectiveStack / view.bigBlind < 10) {
+      t.shortSpots += 1;
+      t.upsideWhenShort += reasons.upside;
+    }
+
     const story = this.storyFor(view.seat);
 
     if (view.street === 'flop' && story.flopRole !== 'bluffed') {
@@ -257,6 +272,10 @@ export class BehaviourTally {
         if (view.street !== 'preflop') t.postflopBluffs += 1;
       }
       if (reasons.clampedDown) t.clampedDown += 1;
+      if (reasons.chosenGamble) {
+        t.chosenGambles += 1;
+        t.upsideAtPush += reasons.upside;
+      }
       if (reasons.allIn) {
         t.allIns += 1;
         depth.allIns += 1;
@@ -308,6 +327,9 @@ export class BehaviourTally {
         bigBetsWithAirPerSession: t.bigBetsWithAir / sessions,
         allIns: t.allIns,
         allInsPerSession: t.allIns / sessions,
+        chosenGambles: t.chosenGambles,
+        upsideAtPush: ratio(t.upsideAtPush, t.chosenGambles),
+        upsideWhenShort: ratio(t.upsideWhenShort, t.shortSpots),
         byDepth: t.byDepth,
         allInsFromShort: ratio(t.allInsFromShort, t.allIns),
         clampedDownShare: ratio(t.clampedDown, t.aggressive),
@@ -383,6 +405,10 @@ function freshTally(): Tally {
     bigBetsWithAir: 0,
     allIns: 0,
     allInsFromShort: 0,
+    chosenGambles: 0,
+    upsideAtPush: 0,
+    shortSpots: 0,
+    upsideWhenShort: 0,
     byDepth: zeroDepths(),
     clampedDown: 0,
     twoBarrels: 0,

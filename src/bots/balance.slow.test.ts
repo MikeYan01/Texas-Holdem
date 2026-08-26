@@ -24,7 +24,22 @@ import { measureBalance } from './measure-balance.ts';
 const WORST_ALLOWED_BB = -2;
 const WIDEST_SPREAD_BB = 4;
 
-const results = measureBalance({ sessions: 300 }).balance;
+// And the table must not collapse into five copies of one Bot.
+//
+// This is the one *behavioural* property that is asserted rather than printed.
+// Everything else the measurement reports is for reading while tuning, on the
+// same reasoning that keeps the personality tests on relative ordering — but
+// differentiation is not a tuning preference, it is the point of the table.
+// Working out who is tight and who is loose is the most valuable thing there is
+// to learn here, and five Bots that bluff and gamble identically destroy it.
+//
+// The floors are loose, like the balance bounds. They do not pin the styles;
+// they assert that there are still styles.
+const NARROWEST_BLUFF_SPREAD = 0.08;
+const NARROWEST_ALL_IN_SPREAD = 0.2;
+
+const measurement = measureBalance({ sessions: 300 });
+const results = measurement.balance;
 
 describe('the table is a game, not a donation', () => {
   it('observed a meaningful number of Hands for every personality', () => {
@@ -47,5 +62,27 @@ describe('the table is a game, not a donation', () => {
   it('still adds up to zero, whatever the styles do to each other', () => {
     const total = results.reduce((sum, r) => sum + r.total, 0);
     expect(Math.abs(total)).toBeLessThan(1e-6);
+  });
+});
+
+describe('the five personalities are still five personalities', () => {
+  const { spread } = measurement.behaviour;
+
+  it('does not have them all bluffing to the same degree', () => {
+    expect(spread.bluffShare, `bluff share spans ${(spread.bluffShare * 100).toFixed(1)} points`) //
+      .toBeGreaterThan(NARROWEST_BLUFF_SPREAD);
+  });
+
+  it('does not have them all gambling a short Stack to the same degree', () => {
+    expect(
+      spread.allInsPerSession,
+      `all-ins per Session span ${spread.allInsPerSession.toFixed(2)}`,
+    ).toBeGreaterThan(NARROWEST_ALL_IN_SPREAD);
+  });
+
+  it('has somebody who gambles a short Stack and somebody who refuses', () => {
+    const gambles = measurement.behaviour.perPersonality.map((b) => b.chosenGambles);
+    expect(Math.max(...gambles)).toBeGreaterThan(0);
+    expect(Math.min(...gambles)).toBe(0);
   });
 });
