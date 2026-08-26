@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { parseCards } from './cards.ts';
 import {
   allCanonicalLabels,
+  combinationsFor,
   lookupPreflop,
   representativeCards,
   startingHandPercentile,
@@ -13,10 +14,6 @@ const cardsFor = (hand: string): [number, number] => {
   const [a, b] = parseCards(hand);
   return [a!, b!];
 };
-
-/** How many of the 1326 holdings a canonical label covers. */
-const combinationsFor = (label: string): number =>
-  label.length === 2 ? 6 : label[2] === 's' ? 4 : 12;
 
 describe('the starting-hand ranking', () => {
   it('covers all 169 canonical Hands, and all 1326 holdings', () => {

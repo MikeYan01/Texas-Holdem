@@ -139,7 +139,7 @@ const A_SHORT_STACK = 10;
  * so the push did not read as considered at all. At a threshold it is 22% for the
  * tightest personality that gambles.
  */
-const WORTH_A_SHOT = 0.1;
+const WORTH_A_SHOT = 0.14;
 
 /**
  * How much Equity a raise asks for after the flop: an even share of the pot plus
@@ -343,90 +343,83 @@ export function explainDecision(
   // for short-Stack spots generally, so the push did not read as considered.
   const gambling = handUpside * personality.gambleAppetite * shortness >= WORTH_A_SHOT;
 
-  const passive = (action: PlayerAction): Decision => ({
-    action,
-    reasons: {
-      trueEquity,
-      equity,
-      potOdds: odds,
-      callThreshold,
-      raiseThreshold,
-      upside: handUpside,
-      startingHandPercentile: percentile,
-      wantsToRaise,
-      bluffing,
-      aggressive: false,
-      bluffDriven: false,
-      intendedRaiseTo: null,
-      raiseTo: null,
-      clampedDown: false,
-      allIn: false,
-      chosenGamble: false,
-      sizeFraction: null,
-    },
-  });
+  // Everything the three outcomes agree on. Written once, because three copies
+  // of an eighteen-field literal is three places to set a field wrong — and one
+  // of them already was, marking every value push as a gamble it never took.
+  const reasons = {
+    trueEquity,
+    equity,
+    potOdds: odds,
+    callThreshold,
+    raiseThreshold,
+    upside: handUpside,
+    startingHandPercentile: percentile,
+    wantsToRaise,
+    bluffing,
+    aggressive: false,
+    bluffDriven: false,
+    intendedRaiseTo: null,
+    raiseTo: null,
+    clampedDown: false,
+    allIn: false,
+    chosenGamble: false,
+    sizeFraction: null,
+  } satisfies DecisionReasons;
+
+  /** Chips over and above the call, as a share of the pot being bet into. */
+  const shareOfPot = (to: number): number =>
+    (to - view.currentBet) / Math.max(1, view.potTotal + legal.callAmount);
+
+  const passive = (action: PlayerAction): Decision => ({ action, reasons });
 
   const fire = (bluffDriven: boolean): Decision => {
     const sized = sizedAggression(view, personality, rng);
     return {
       action: sized.action,
       reasons: {
-        trueEquity,
-        equity,
-        potOdds: odds,
-        callThreshold,
-        raiseThreshold,
-        upside: handUpside,
-        startingHandPercentile: percentile,
-        wantsToRaise,
-        bluffing,
+        ...reasons,
         aggressive: true,
         bluffDriven,
         intendedRaiseTo: sized.intendedRaiseTo,
         raiseTo: sized.raiseTo,
         clampedDown: sized.intendedRaiseTo > legal.maxRaiseTo,
         allIn: sized.action.type === 'all-in',
-        chosenGamble: false,
-        sizeFraction:
-          (sized.raiseTo - view.currentBet) / Math.max(1, view.potTotal + legal.callAmount),
+        sizeFraction: shareOfPot(sized.raiseTo),
       },
     };
   };
 
-  /** Everything in, on purpose. The Stack is the size, so there is none to draw. */
-  const push = (bluffDriven: boolean): Decision => ({
+  /**
+   * Everything in, on purpose. The Stack is the size, so there is none to draw.
+   *
+   * `chosenGamble` says whether the Upside test is what put the chips in. A push
+   * made because the Hand already cleared the raising standard is a value bet
+   * that happens to be for everything, and counting it as a gamble would make
+   * the personality that refuses to gamble look like one that does.
+   */
+  const push = (bluffDriven: boolean, chosenGamble: boolean): Decision => ({
     action: { type: 'all-in' },
     reasons: {
-      trueEquity,
-      equity,
-      potOdds: odds,
-      callThreshold,
-      raiseThreshold,
-      upside: handUpside,
-      startingHandPercentile: percentile,
-      wantsToRaise,
-      bluffing,
+      ...reasons,
       aggressive: true,
       bluffDriven,
       intendedRaiseTo: legal.maxRaiseTo,
       raiseTo: legal.maxRaiseTo,
-      clampedDown: false,
       allIn: true,
-      chosenGamble: true,
-      sizeFraction:
-        (legal.maxRaiseTo - view.currentBet) / Math.max(1, view.potTotal + legal.callAmount),
+      chosenGamble,
+      sizeFraction: shareOfPot(legal.maxRaiseTo),
     },
   });
 
   // Raising is not legal at this depth — the Stack cannot cover a full raise —
   // but the right to push never goes away, so pushing is what raising means here.
   if (pushWouldLead && !canOpen && (wantsToRaise || gambling)) {
-    return push(!wantsToRaise);
+    return push(!wantsToRaise, !wantsToRaise);
   }
 
   if (legal.canCheck) {
     if ((wantsToRaise || bluffing) && canOpen) return fire(!wantsToRaise);
-    if (gambling && pushWouldLead) return push(!wantsToRaise);
+    if (gambling && pushWouldLead) return push(!wantsToRaise, true);
     return passive({ type: 'check' });
   }
 
@@ -442,7 +435,7 @@ export function explainDecision(
     // Even a hand with nothing takes the pot often enough to be worth firing at
     // sometimes; this is where the Bluffer picks up pots with 7-2.
     if (bluffing && rng() < 0.5 && canOpen) return fire(true);
-    if (gambling && pushWouldLead) return push(true);
+    if (gambling && pushWouldLead) return push(true, true);
     return passive({ type: 'fold' });
   }
 

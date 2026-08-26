@@ -1,5 +1,9 @@
 import { describe, expect, it } from 'vitest';
-import { allCanonicalLabels, lookupPreflop } from '../poker-math/preflop-equity.ts';
+import {
+  allCanonicalLabels,
+  combinationsFor,
+  lookupPreflop,
+} from '../poker-math/preflop-equity.ts';
 import { seededRng } from '../poker-math/rng.ts';
 import { createSession, reduce } from '../engine/engine.ts';
 import { enumerateLegalActions } from '../engine/random-play.ts';
@@ -192,9 +196,6 @@ describe('the Opening Range, and the contradiction it replaced', () => {
     // Weighted by combinations, because that is what a percentile is a share of.
     // This is the property the constant is *for*: "the top 10%" has to mean the
     // top 10%, or the number is decoration.
-    const combinationsFor = (label: string): number =>
-      label.length === 2 ? 6 : label[2] === 's' ? 4 : 12;
-
     for (const personality of everyPersonality) {
       let opened = 0;
       for (const label of allCanonicalLabels()) {
@@ -296,7 +297,7 @@ describe('the personalities differ in the right direction', () => {
 
     for (const label of allCanonicalLabels()) {
       const hole = `${label[0]}h ${label[1]}${label[2] === 's' ? 'h' : 'd'}`;
-      const weight = label.length === 2 ? 6 : label[2] === 's' ? 4 : 12;
+      const weight = combinationsFor(label);
       // A realistic preflop price: 3 in the pot, 2 to call.
       const view = viewFacing({ potTotal: 3, callAmount: 2, street: 'preflop', hole });
       const equity = lookupPreflop(label, view.opponentCount)!.equity;
@@ -625,7 +626,7 @@ describe('Position, which the Bots could never see before', () => {
       let dealt = 0;
       for (const label of allCanonicalLabels()) {
         const hole = `${label[0]}h ${label[1]}${label[2] === 's' ? 'h' : 'd'}`;
-        const weight = label.length === 2 ? 6 : label[2] === 's' ? 4 : 12;
+        const weight = combinationsFor(label);
         const view = { ...viewFacing({ potTotal: 3, callAmount: 2, street: 'preflop', hole }), position };
         dealt += weight;
         if (explainDecision(view, PERSONALITIES[key], 0.4, seededRng(1)).reasons.wantsToRaise) {

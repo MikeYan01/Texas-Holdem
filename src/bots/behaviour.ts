@@ -220,14 +220,46 @@ export class BehaviourTally {
     if (!t) return;
     this.decisions += 1;
 
-    // A Seat with no way to bet or raise cannot show aggression, so counting it
-    // in the denominator would report passivity that was never a choice.
-    if (!view.legalActions.canBet && !view.legalActions.canRaise) return;
+    const story = this.storyFor(view.seat);
+    const canOpen = view.legalActions.canBet || view.legalActions.canRaise;
+    const depth = t.byDepth[stackDepthOf(view.stack / view.bigBlind)];
+
+    // Aggression counts wherever it happens. A Seat too short to make a legal
+    // raise still has the right to push, and that push is precisely the decision
+    // this feature added — counting only the openable spots hid four all-ins in
+    // every five, which is most of what the readout exists to report.
+    if (reasons.aggressive) {
+      t.aggressive += 1;
+      depth.aggressive += 1;
+      if (reasons.bluffDriven) {
+        t.bluffDriven += 1;
+        if (view.street !== 'preflop') t.postflopBluffs += 1;
+      }
+      if (reasons.clampedDown) t.clampedDown += 1;
+      if (reasons.allIn) {
+        t.allIns += 1;
+        depth.allIns += 1;
+        if (view.stack / view.bigBlind < 10) t.allInsFromShort += 1;
+      }
+      if (reasons.chosenGamble) {
+        t.chosenGambles += 1;
+        t.upsideAtPush += reasons.upside;
+      }
+      if ((reasons.sizeFraction ?? 0) >= A_BIG_BET) {
+        t.bigBets += 1;
+        t.bigBetEquity[equityBandOf(reasons.trueEquity)] += 1;
+        if (reasons.trueEquity < AIR) t.bigBetsWithAir += 1;
+      }
+    }
+
+    // The *rates*, though, are only fair over spots where aggression was on the
+    // table. A Seat with no way to bet or raise cannot show any, so counting it
+    // in the denominator would report passivity nobody decided on.
+    if (!canOpen) return;
 
     t.openable += 1;
     const street = t.byStreet[view.street];
     street.decisions += 1;
-    const depth = t.byDepth[stackDepthOf(view.stack / view.bigBlind)];
     depth.decisions += 1;
 
     // Measured on the effective Stack, which is what the push decision reads.
@@ -235,8 +267,6 @@ export class BehaviourTally {
       t.shortSpots += 1;
       t.upsideWhenShort += reasons.upside;
     }
-
-    const story = this.storyFor(view.seat);
 
     if (view.street === 'flop' && story.flopRole !== 'bluffed') {
       // Bluffing the flop is the loudest thing a Seat can have done there, so it
@@ -263,29 +293,8 @@ export class BehaviourTally {
     }
 
     if (reasons.aggressive) {
-      t.aggressive += 1;
       street.aggressive += 1;
-      depth.aggressive += 1;
-      if (reasons.bluffDriven) {
-        t.bluffDriven += 1;
-        street.bluffDriven += 1;
-        if (view.street !== 'preflop') t.postflopBluffs += 1;
-      }
-      if (reasons.clampedDown) t.clampedDown += 1;
-      if (reasons.chosenGamble) {
-        t.chosenGambles += 1;
-        t.upsideAtPush += reasons.upside;
-      }
-      if (reasons.allIn) {
-        t.allIns += 1;
-        depth.allIns += 1;
-        if (view.stack / view.bigBlind < 10) t.allInsFromShort += 1;
-      }
-      if ((reasons.sizeFraction ?? 0) >= A_BIG_BET) {
-        t.bigBets += 1;
-        t.bigBetEquity[equityBandOf(reasons.trueEquity)] += 1;
-        if (reasons.trueEquity < AIR) t.bigBetsWithAir += 1;
-      }
+      if (reasons.bluffDriven) street.bluffDriven += 1;
       if (
         view.street === 'turn' &&
         reasons.bluffDriven &&

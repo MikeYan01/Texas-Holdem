@@ -7,7 +7,6 @@ import {
   likeliestCategories,
   madeCategoryNow,
   upside,
-  upsideOf,
 } from './hand-odds.ts';
 import { PREFLOP_HAND_ODDS } from './preflop-hand-odds.ts';
 import { allCanonicalLabels } from './starting-hands.ts';
@@ -238,7 +237,6 @@ describe('Upside', () => {
       .slice(UPSIDE_BAR)
       .reduce((sum, probability) => sum + probability, 0);
     expect(up('Ah 7h', 'Kh 4h 2c')).toBeCloseTo(tail, 12);
-    expect(upsideOf(distribution)).toBeCloseTo(tail, 12);
   });
 
   it('is exact rather than sampled, so it needs no error bars', () => {

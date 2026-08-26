@@ -169,14 +169,10 @@ export const UPSIDE_BAR: HandCategory = HandCategory.Straight;
  * Equity alone governs.
  */
 export function upside(hole: readonly [Card, Card], board: readonly Card[]): number {
-  return upsideOf(handOdds(hole, board));
-}
-
-/** The same, for a caller that already has the distribution in hand. */
-export function upsideOf(odds: HandOdds): number {
+  const { probabilities } = handOdds(hole, board);
   let total = 0;
   for (let category = UPSIDE_BAR; category < HAND_CATEGORY_COUNT; category++) {
-    total += odds.probabilities[category] ?? 0;
+    total += probabilities[category] ?? 0;
   }
   return total;
 }

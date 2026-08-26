@@ -63,8 +63,11 @@ export function lookupPreflop(label: string, opponentCount: number): PreflopCell
 /** The 1326 ways to be dealt two cards, which is what a percentile is a share of. */
 const TOTAL_COMBINATIONS = 1326;
 
-/** How many of those 1326 a canonical label stands for. They sum to 1326. */
-function combinationsFor(label: string): number {
+/**
+ * How many of those 1326 a canonical label stands for: six ways to be dealt a
+ * pair, four a suited hand, twelve an offsuit one. They sum to 1326.
+ */
+export function combinationsFor(label: string): number {
   if (label.length === 2) return 6;
   return label[2] === 's' ? 4 : 12;
 }

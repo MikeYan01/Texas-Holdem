@@ -23,7 +23,7 @@ The table got **more** heads-up, not less. Showdowns fell. The spread across the
 
 And it made the thing it was supposed to fix worse. A short Stack's intended bet went from 5.41 times its Stack to 10.97 times, because deep opponents build bigger pots and the sizing rule read the pot alone. Depth removes the *exposure* to short Stacks without making short-Stack play any better; the moment a Seat is short again, it is short in a bigger pot.
 
-What actually opened the table up was giving the Bots an entry standard that means something — mean live Seats at the flop 2.02 → 2.07 and three-handed flops 2.1% → 6.7% — and what fixed the sizing was reading the Stack, which costs nothing in balance.
+What actually opened the table up was giving the Bots an entry standard that means something — mean live Seats at the flop 2.02 → 2.07 and three-handed flops 2.1% → 6.5% — and what fixed the sizing was reading the Stack, which costs nothing in balance.
 
 ## Correcting the fold/raise contradiction on its own makes the game worse
 
@@ -48,6 +48,10 @@ So the correction ships with a real preflop entry standard, and only with one. A
 
 The 20 BB Stack is now load-bearing in a way it was not before. Short-Stack play is addressed by stack-aware bet sizing and by an Upside-driven push a Bot chooses, rather than by removing the Bots' exposure to being short — which is the more interesting game anyway, since a short Stack is a decision and a deep one is mostly a delay.
 
-Rebuys have risen to 23.1 per 100 Hands, which is about four a Session against two and a half. That is the cost of a table that now bets. It was measured against smaller bets, tighter opening ranges and a lower Stack-commitment ceiling, and none of them bought it back without giving up the aggression the change existed to add.
+Two numbers did not land where the tickets asked, and are recorded here rather than quietly accepted.
+
+**Rebuys are 22.9 per 100 Hands against a 14.1 baseline** — about four a Session against two and a half — where the ticket asked them to stay near 14.1. Measured, **73% of busts end with a `call`, not with an all-in** (468 of 637 over 150 Sessions; 167 end with an all-in and only 32 of those with a gamble). So this is not the new aggression busting Stacks directly: it is that a table which bets more builds bigger pots, and a Seat then calls off its last chips at a price that makes calling correct. Reducing it means making Bots fold when the pot is large and the call is small, which is the precise stupidity ADR-0003 exists to prevent. Smaller bets, tighter opening ranges and a lower Stack-commitment ceiling were all measured; none bought it back without giving up the aggression the change existed to add.
+
+**All-ins from Stacks under 10 BB are 62% of all all-ins against a 55% baseline**, where a ticket asked for a fall. The *character* of those pushes has changed completely — 97.4% of them used to be the legal maximum clamping an over-sized bet, and 0.0% are now — but the share did not. It cannot be tuned down, and the attempt is instructive: requiring a stronger Hand to commit a whole Stack pushes the share **up**, to 70% at half the range and 76% at a quarter, because it removes the deeper pushes first while the short ones remain the only aggression available at that depth. It also costs balance badly, spread 0.27 → 0.49. And the pushes it removes do not become folds: they become calls for the same chips with none of the fold equity, which is worse poker and invisible to the Player besides.
 
 If either road is proposed again, the numbers above were produced by the one experiment in `src/bots/measure-balance.ts`, which is also what `npm run measure:bots` prints and what `balance.slow.test.ts` guards (ADR-0006).

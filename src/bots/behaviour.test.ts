@@ -20,11 +20,17 @@ function viewFor(options: {
   potTotal: number;
   callAmount: number;
   street?: 'preflop' | 'flop' | 'turn';
+  hole?: string;
 }): BotView {
   const { stack, potTotal, callAmount } = options;
   const state = positionAt({
     seats: [
-      { stack, hole: 'Ah Kd', streetCommitted: 0, committed: potTotal - callAmount },
+      {
+        stack,
+        hole: options.hole ?? 'Ah Kd',
+        streetCommitted: 0,
+        committed: potTotal - callAmount,
+      },
       { stack: 400, hole: '2c 3d', streetCommitted: callAmount, committed: callAmount },
     ],
     street: options.street ?? 'flop',
@@ -122,6 +128,48 @@ describe('the readout counts what the Bot actually did', () => {
     const { reasons, behaviour } = tallyOne(view, 0.95, 4);
     expect(reasons.aggressive).toBe(true);
     expect(behaviour.bigBets).toBe(reasons.sizeFraction! >= A_BIG_BET ? 1 : 0);
+  });
+
+  it('counts a push made where no legal raise existed', () => {
+    // The readout once dropped these, because it gated every counter on being
+    // able to bet or raise — and a Seat too short to reach the minimum raise can
+    // do neither, which is exactly the state the chosen push exists to serve.
+    // Four all-ins in every five went unreported.
+    const view = viewFor({ stack: 8, potTotal: 200, callAmount: 5, street: 'preflop' });
+    expect(view.legalActions.canBet || view.legalActions.canRaise).toBe(false);
+    expect(view.legalActions.canAllIn).toBe(true);
+
+    const tally = new BehaviourTally();
+    tally.startHand();
+    const { action, reasons } = explainDecision(view, PERSONALITIES.LAG, 0.9, seededRng(1));
+    expect(action.type).toBe('all-in');
+    tally.record('LAG', view, reasons, action.type);
+
+    const behaviour = tally.report(1).perPersonality.find((b) => b.key === 'LAG')!;
+    expect(behaviour.allIns).toBe(1);
+    expect(behaviour.aggressive).toBe(1);
+    // But it is in the denominator of no *rate*: aggression was never on the
+    // table here, so counting it would report a choice nobody got to make.
+    expect(behaviour.openable).toBe(0);
+  });
+
+  it('calls a push a gamble only when Upside is what put the chips in', () => {
+    // A Hand that already clears the raising standard is a value bet that
+    // happens to be for everything. Counting it as a gamble made the Rock, whose
+    // appetite is zero, look like a Bot that gambles.
+    // Aces: inside every personality's Opening Range, so the Rock pushes them
+    // even though its appetite for a gamble is exactly zero.
+    const view = viewFor({
+      stack: 8,
+      potTotal: 200,
+      callAmount: 5,
+      street: 'preflop',
+      hole: 'Ah As',
+    });
+    const { reasons } = explainDecision(view, PERSONALITIES.Rock, 0.9, seededRng(1));
+    expect(reasons.allIn).toBe(true);
+    expect(reasons.wantsToRaise).toBe(true);
+    expect(reasons.chosenGamble).toBe(false);
   });
 
   it('files an all-in under the Stack depth that produced it', () => {

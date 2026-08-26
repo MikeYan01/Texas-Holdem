@@ -48,9 +48,13 @@ Where a Seat stands relative to the Button in the order of action (UTG, CO, BTN,
 so on). Because the Button moves every Hand, a given Seat's Position changes every Hand —
 Position is not a seat number.
 
-A Bot reads it as one number: 0 for the Seat that acts first among those still in the Hand,
-1 for the Seat that acts last. It widens the Opening Range and raises bluff frequency,
-which is what makes Position something a Player can watch for and then exploit.
+A Bot reads it as one number, measured on the order used **after** the flop — clockwise from
+the Button — because that is the order deciding three Streets out of four: 0 for the Seat
+that acts first among those still in the Hand, 1 for the Button. Before the flop the blinds
+act last on that one Street, but they are out of position for the rest of the Hand, and it
+is the rest of the Hand that makes the Button the best Seat to enter a pot from. Position
+widens the Opening Range and raises bluff frequency, which is what makes it something a
+Player can watch for and then exploit.
 _Avoid_: seat index, 座位号
 
 **Blind(盲注)**:
