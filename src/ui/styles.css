@@ -2128,7 +2128,15 @@ button:disabled {
     min-width: 0;
     height: 24px;
     background:
-      linear-gradient(90deg, transparent 0 8px, var(--gold-deep) 8px, #2a3a35 calc(100% - 8px), transparent calc(100% - 8px));
+      linear-gradient(
+        90deg,
+        transparent 0 8px,
+        var(--gold-deep) 8px,
+        var(--gold) var(--slider-progress-inset),
+        #2a3a35 var(--slider-progress-inset),
+        #2a3a35 calc(100% - 8px),
+        transparent calc(100% - 8px)
+      );
   }
 
   .slider:disabled {
@@ -2727,20 +2735,62 @@ button:disabled {
     height: 38px;
   }
 
+  /* At these sizes the corner suit and the large pip collide. Keep the rank
+     plus one restrained suit mark; the full two-mark face remains on desktop. */
+  .screen--table .card__suit {
+    display: none;
+  }
+
+  .screen--table .card--board .card__corner,
+  .screen--table .card--hole .card__corner,
+  .screen--table .card--mini .card__corner {
+    top: 3px;
+    left: 3px;
+    transform: none;
+  }
+
   .card--board .card__rank {
     font-size: 14px;
   }
 
-  .card--board .card__pip {
-    font-size: 23px;
+  .screen--table .card--hole .card__rank {
+    font-size: 12px;
+  }
+
+  .screen--table .card--board .card__pip {
+    right: 3px;
+    bottom: 3px;
+    font-size: 19px;
+    transform: none;
+  }
+
+  .screen--table .card--hole .card__pip {
+    right: 3px;
+    bottom: 3px;
+    font-size: 15px;
+    transform: none;
   }
 
   .card--mini .card__rank {
     font-size: 10px;
   }
 
-  .card--mini .card__pip {
-    font-size: 15px;
+  .screen--table .card--mini .card__pip {
+    right: 3px;
+    bottom: 3px;
+    font-size: 12px;
+    transform: none;
+  }
+
+  .rankings__cards .card--mini .card__corner {
+    top: 2px;
+    left: 2px;
+  }
+
+  .rankings__cards .card--mini .card__pip {
+    right: 2px;
+    bottom: 2px;
+    font-size: 9px;
   }
 
   .middle {

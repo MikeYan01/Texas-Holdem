@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, type CSSProperties } from 'react';
 import type { LegalActions, PlayerAction } from '../../engine/types.ts';
 import { useLocale } from '../locale-context.tsx';
 
@@ -6,6 +6,10 @@ export type ActionBarProps = {
   readonly legal: LegalActions | null;
   readonly waiting: boolean;
   readonly onAct: (action: PlayerAction) => void;
+};
+
+type SliderStyle = CSSProperties & {
+  '--slider-progress-inset': string;
 };
 
 /**
@@ -34,6 +38,19 @@ export function ActionBar({ legal, waiting, onAct }: ActionBarProps) {
   }
 
   const raiseVerb = legal.canBet ? t.actions.bet : t.actions.raiseTo;
+  const sliderMax = Math.max(legal.minRaiseTo, legal.maxRaiseTo);
+  const progress =
+    sliderMax === legal.minRaiseTo
+      ? 100
+      : Math.min(
+          100,
+          Math.max(0, ((raiseTo - legal.minRaiseTo) / (sliderMax - legal.minRaiseTo)) * 100),
+        );
+  const progressText = progress.toFixed(3);
+  const sliderStyle: SliderStyle = {
+    // The mobile track leaves 8px at each end for the chip-shaped thumb.
+    '--slider-progress-inset': `calc(8px + ${progressText}% - ${(progress * 0.16).toFixed(3)}px)`,
+  };
   const submitRaise = (to: number) => {
     if (to >= legal.maxRaiseTo && legal.canAllIn) return onAct({ type: 'all-in' });
     onAct(legal.canBet ? { type: 'bet', to } : { type: 'raise', to });
@@ -107,9 +124,10 @@ export function ActionBar({ legal, waiting, onAct }: ActionBarProps) {
           className="slider"
           disabled={!canSize}
           min={legal.minRaiseTo}
-          max={Math.max(legal.minRaiseTo, legal.maxRaiseTo)}
+          max={sliderMax}
           step={1}
           value={raiseTo}
+          style={sliderStyle}
           onChange={(event) => setRaiseTo(Number(event.target.value))}
           aria-label={t.actions.sliderLabel}
         />
