@@ -10,11 +10,26 @@ import { SeatBadge } from './SeatBadge.tsx';
  * Where a Seat sits on the felt. The Player is always at the bottom and the rest
  * run clockwise from there, so the table matches the direction the Button moves.
  */
-function seatPosition(visualIndex: number, seatCount: number): React.CSSProperties {
+type SeatPosition = React.CSSProperties & {
+  readonly '--seat-left': string;
+  readonly '--seat-top': string;
+  readonly '--seat-left-compact': string;
+  readonly '--seat-top-compact': string;
+  readonly '--seat-left-landscape': string;
+  readonly '--seat-top-landscape': string;
+};
+
+function seatPosition(visualIndex: number, seatCount: number): SeatPosition {
   const angle = ((90 + (visualIndex * 360) / seatCount) * Math.PI) / 180;
+  const x = Math.cos(angle);
+  const y = Math.sin(angle);
   return {
-    left: `${50 + 41 * Math.cos(angle)}%`,
-    top: `${50 + 38 * Math.sin(angle)}%`,
+    '--seat-left': `${50 + 41 * x}%`,
+    '--seat-top': `${50 + 38 * y}%`,
+    '--seat-left-compact': `${50 + 39 * x}%`,
+    '--seat-top-compact': `${50 + 39 * y}%`,
+    '--seat-left-landscape': `${50 + 43 * x}%`,
+    '--seat-top-landscape': `${50 + 36 * y}%`,
   };
 }
 
@@ -91,6 +106,7 @@ export function PokerTable({ controller }: { controller: GameController }) {
             isWinner={winners.has(seat.index)}
             winningCards={winners.get(seat.index) ?? []}
             style={seatPosition(visualIndex, seats.length)}
+            visualIndex={visualIndex}
             chipsSide={chipsSideFor(visualIndex, seats.length)}
           />
         );
@@ -107,8 +123,8 @@ export function PokerTable({ controller }: { controller: GameController }) {
             className={`flying flying--${animation.kind}`}
             style={
               {
-                '--seat-x': position.left,
-                '--seat-y': position.top,
+                '--seat-x': position['--seat-left'],
+                '--seat-y': position['--seat-top'],
               } as React.CSSProperties
             }
           >

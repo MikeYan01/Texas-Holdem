@@ -1,13 +1,12 @@
 /* Texas — table styling.
  *
- * Dark, flat and high contrast, laid out for a wide desktop; there is
- * deliberately no mobile breakpoint. Cards are drawn as type rather than
- * pictures: at this size a realistic face is less legible, not more.
+ * Dark, flat and high contrast. Cards are drawn as type rather than pictures:
+ * at this size a realistic face is less legible, not more.
  *
- * One layout rule holds the whole screen together and is worth stating up front:
- * the table screen is exactly one viewport tall and nothing on it may grow. The
- * action log is unbounded — thirty Hands of commentary — so anything free to
- * size itself would drag the felt taller until the table no longer fitted.
+ * One layout rule holds the playable landscape screen together and is worth
+ * stating up front: it is exactly one viewport tall and nothing on it may grow.
+ * The action log is unbounded — thirty Hands of commentary — so anything free
+ * to size itself would drag the felt taller until the table no longer fitted.
  */
 
 :root {
@@ -90,6 +89,8 @@ button {
   font: inherit;
   cursor: pointer;
   font-variant-numeric: tabular-nums;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
 }
 
 button:disabled {
@@ -107,6 +108,7 @@ button:disabled {
 
 .screen {
   min-height: 100vh;
+  min-height: 100dvh;
   display: flex;
   flex-direction: column;
 }
@@ -232,9 +234,14 @@ button:disabled {
 .screen--table {
   /* Exactly one viewport, never more. See the note at the top of this file. */
   height: 100vh;
+  height: 100dvh;
   min-height: 0;
   overflow: hidden;
-  padding: 10px 18px 14px;
+  padding:
+    max(10px, env(safe-area-inset-top))
+    max(18px, env(safe-area-inset-right))
+    max(14px, env(safe-area-inset-bottom))
+    max(18px, env(safe-area-inset-left));
   gap: 10px;
 }
 
@@ -460,6 +467,8 @@ button:disabled {
 
 .seat {
   position: absolute;
+  left: var(--seat-left);
+  top: var(--seat-top);
   transform: translate(-50%, -50%);
   display: flex;
   flex-direction: column;
@@ -1175,6 +1184,7 @@ button:disabled {
 .slider {
   flex: 1;
   min-width: 130px;
+  margin: 0;
   appearance: none;
   height: 5px;
   border-radius: 99px;
@@ -1471,8 +1481,8 @@ button:disabled {
 
 .langswitch {
   position: fixed;
-  top: 10px;
-  right: 14px;
+  top: max(10px, env(safe-area-inset-top));
+  right: max(14px, env(safe-area-inset-right));
   z-index: 30;
   display: flex;
   gap: 2px;
@@ -1505,6 +1515,10 @@ button:disabled {
 .langswitch__option.is-active {
   background: var(--panel-lift);
   color: var(--gold);
+}
+
+.rotate-notice {
+  display: none;
 }
 
 
@@ -1902,4 +1916,1056 @@ button:disabled {
   color: var(--ink-dim);
   font-size: 12px;
   line-height: 1.5;
+}
+
+/* ======================================================= compact screens ==
+
+   Phones use the real device viewport rather than a scaled 1280px canvas. In
+   portrait, the table keeps a deliberate card-table aspect ratio and the page
+   scrolls to the controls. In landscape, the bounded viewport remains the
+   whole game: decorative chips and hidden Bot cards yield their space to the
+   felt, while the action buttons keep usable touch targets. */
+
+@media (max-width: 600px) {
+  .screen--start,
+  .screen--results {
+    padding:
+      max(72px, calc(env(safe-area-inset-top) + 54px))
+      max(22px, env(safe-area-inset-right))
+      max(28px, env(safe-area-inset-bottom))
+      max(22px, env(safe-area-inset-left));
+  }
+
+  .screen--results {
+    justify-content: flex-start;
+    gap: 18px;
+    overflow-y: auto;
+  }
+
+  .screen__title {
+    font-size: clamp(34px, 11vw, 46px);
+  }
+
+  .screen__lead {
+    font-size: 16px;
+    line-height: 1.75;
+  }
+
+  .screen--start .screen__lead {
+    margin-bottom: 30px;
+    line-height: 1.75;
+  }
+
+  .screen--start .btn--large,
+  .screen--results .btn--large {
+    width: min(100%, 320px);
+    min-height: 54px;
+    padding: 13px 24px;
+    font-size: 17px;
+  }
+
+  .start__fan {
+    margin-bottom: 34px;
+  }
+
+  .start__rule {
+    width: min(300px, 78%);
+    margin: 17px 0 21px;
+  }
+
+  .langswitch {
+    top: max(9px, env(safe-area-inset-top));
+    right: max(9px, env(safe-area-inset-right));
+  }
+
+  .langswitch__option {
+    min-height: 36px;
+    padding: 5px 12px;
+    font-size: 12px;
+  }
+
+  /* Portrait is intentionally a scrolling document. Letting the felt consume
+     all remaining height is what made it stretch into a tall, narrow pill. */
+  .screen--table {
+    height: auto;
+    min-height: 100vh;
+    min-height: 100dvh;
+    overflow-x: hidden;
+    overflow-y: auto;
+    padding:
+      max(8px, env(safe-area-inset-top))
+      max(8px, env(safe-area-inset-right))
+      max(10px, env(safe-area-inset-bottom))
+      max(8px, env(safe-area-inset-left));
+    gap: 8px;
+  }
+
+  .topbar {
+    flex-wrap: wrap;
+    gap: 5px;
+    margin-top: 42px;
+    padding: 0 2px;
+    font-size: 11px;
+  }
+
+  .topbar__counter {
+    padding: 3px 8px;
+  }
+
+  .topbar__counter strong {
+    font-size: 13px;
+  }
+
+  .topbar__hint {
+    display: none;
+  }
+
+  .topbar__help {
+    min-height: 32px;
+    padding: 3px 10px;
+    font-size: 11px;
+  }
+
+  .topbar__blinds {
+    margin-left: 0;
+    font-size: 11px;
+  }
+
+  .layout,
+  .layout--log-collapsed {
+    position: relative;
+    flex: none;
+    display: block;
+    min-height: 0;
+    overflow: visible;
+  }
+
+  .felt {
+    height: auto;
+    aspect-ratio: 4 / 5;
+    margin: 9px 8px;
+    border-radius: 42% / 38%;
+  }
+
+  .felt__rail {
+    inset: -8px;
+    border-radius: 42% / 38%;
+  }
+
+  .felt__inlay {
+    inset: 18px 22px;
+  }
+
+  /* The log is a drawer over the felt on a phone. It starts collapsed (from
+     TableScreen) and reopening it no longer steals half the table's width. */
+  .layout .log {
+    position: absolute;
+    inset: 0 0 0 auto;
+    width: min(300px, calc(100% - 44px));
+    z-index: 10;
+  }
+
+  .layout .log--collapsed {
+    width: 36px;
+    padding: 6px 0;
+  }
+
+  .log__toggle {
+    min-height: 32px;
+  }
+
+  .controls {
+    flex-direction: column;
+    min-height: 0;
+    gap: 9px;
+    padding: 9px;
+  }
+
+  .odds {
+    width: 100%;
+    padding: 0 0 9px;
+    border-right: 0;
+    border-bottom: 1px solid var(--line-soft);
+  }
+
+  .odds--idle {
+    min-height: 0;
+    padding: 0;
+    border-bottom-color: transparent;
+  }
+
+  .odds__row {
+    grid-template-columns: 98px minmax(0, 1fr) 46px;
+  }
+
+  .odds__row:lang(zh) {
+    grid-template-columns: 44px minmax(0, 1fr) 46px;
+  }
+
+  .actions {
+    gap: 7px;
+  }
+
+  .actions__row {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 7px;
+  }
+
+  .actions__row--sizing {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .actions__row .btn {
+    min-width: 0;
+    min-height: 44px;
+    padding: 8px 6px;
+  }
+
+  .slider {
+    grid-column: 1 / -1;
+    width: 100%;
+    min-width: 0;
+    height: 24px;
+    background:
+      linear-gradient(90deg, transparent 0 8px, var(--gold-deep) 8px, #2a3a35 calc(100% - 8px), transparent calc(100% - 8px));
+  }
+
+  .slider:disabled {
+    background:
+      linear-gradient(90deg, transparent 0 8px, #22302c 8px, #22302c calc(100% - 8px), transparent calc(100% - 8px));
+  }
+
+  .seat {
+    left: var(--seat-left-compact);
+    top: var(--seat-top-compact);
+    width: 104px;
+    gap: 3px;
+  }
+
+  .seat__plate {
+    border-radius: 8px;
+    padding: 4px 5px;
+  }
+
+  .seat__ring {
+    inset: -2px;
+    border-radius: 10px;
+  }
+
+  .seat__identity {
+    gap: 4px;
+  }
+
+  .seat__avatar {
+    width: 20px;
+    height: 20px;
+    font-size: 9px;
+  }
+
+  .seat__name {
+    font-size: 11px;
+  }
+
+  .seat__button {
+    width: 16px;
+    height: 16px;
+    font-size: 9px;
+  }
+
+  .seat__numbers {
+    gap: 3px;
+    margin-top: 3px;
+  }
+
+  .seat__stat {
+    flex-direction: row;
+    align-items: baseline;
+    gap: 2px;
+    padding: 1px 2px;
+  }
+
+  .seat__stat-label {
+    font-size: 7px;
+    letter-spacing: 0.02em;
+  }
+
+  .seat__stack,
+  .seat__score {
+    font-size: 10px;
+  }
+
+  .seat__tag {
+    top: -6px;
+    padding: 1px 6px;
+    font-size: 8px;
+  }
+
+  .seat__bet {
+    top: calc(100% + 3px);
+    gap: 4px;
+    padding: 2px 7px 2px 4px;
+    font-size: 10px;
+  }
+
+  .seat__chips {
+    display: none;
+  }
+
+  .card--board {
+    width: 40px;
+    height: 56px;
+    border-radius: 5px;
+  }
+
+  .card--hole {
+    width: 30px;
+    height: 42px;
+  }
+
+  .card--board .card__corner {
+    top: 4px;
+    left: 4px;
+  }
+
+  .card--board .card__rank {
+    font-size: 15px;
+  }
+
+  .card--board .card__pip {
+    right: 4px;
+    bottom: 4px;
+    font-size: 25px;
+  }
+
+  .card--hole .card__rank {
+    font-size: 12px;
+  }
+
+  .card--hole .card__pip {
+    font-size: 18px;
+  }
+
+  .middle {
+    top: 46%;
+    gap: 8px;
+  }
+
+  .board,
+  .reveal__board-cards {
+    gap: 5px;
+  }
+
+  .pots {
+    gap: 4px;
+  }
+
+  .pot {
+    gap: 4px;
+    padding: 3px 8px 3px 5px;
+  }
+
+  .pot__name {
+    font-size: 9px;
+  }
+
+  .pot__amount {
+    font-size: 13px;
+  }
+
+  .chip--pot {
+    width: 12px;
+    height: 12px;
+  }
+
+  .overlay {
+    align-items: stretch;
+    padding:
+      max(7px, env(safe-area-inset-top))
+      max(42px, env(safe-area-inset-right))
+      max(7px, env(safe-area-inset-bottom))
+      max(7px, env(safe-area-inset-left));
+  }
+
+  .overlay--modal {
+    padding:
+      max(7px, env(safe-area-inset-top))
+      max(7px, env(safe-area-inset-right))
+      max(7px, env(safe-area-inset-bottom))
+      max(7px, env(safe-area-inset-left));
+  }
+
+  .reveal,
+  .rankings {
+    width: 100%;
+    max-height: 100%;
+    padding: 14px 12px;
+    gap: 10px;
+  }
+
+  .reveal__board {
+    padding: 9px 10px;
+  }
+
+  .reveal__pot {
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 5px 8px;
+    padding: 5px 10px;
+  }
+
+  .reveal__seats {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 6px;
+  }
+
+  .reveal__seat {
+    padding: 7px 4px;
+  }
+
+  .rankings__row {
+    grid-template-columns: 22px minmax(0, 1fr);
+    gap: 5px 8px;
+    padding: 8px 5px;
+  }
+
+  .rankings__cards,
+  .rankings__note {
+    grid-column: 2;
+  }
+
+  .ranking {
+    width: 100%;
+  }
+
+  .ranking__row {
+    grid-template-columns: 28px minmax(0, 1fr) auto;
+    gap: 8px;
+    padding: 10px 12px;
+  }
+
+  .ranking__buyin {
+    grid-column: 2 / -1;
+  }
+}
+
+@media (orientation: landscape) and (max-width: 1000px) and (max-height: 540px) {
+  .screen--start,
+  .screen--results {
+    min-height: 100vh;
+    min-height: 100dvh;
+    justify-content: center;
+    padding:
+      max(8px, env(safe-area-inset-top))
+      max(56px, env(safe-area-inset-right))
+      max(8px, env(safe-area-inset-bottom))
+      max(18px, env(safe-area-inset-left));
+  }
+
+  .screen--start {
+    overflow-y: auto;
+  }
+
+  .screen--results {
+    justify-content: flex-start;
+    overflow-y: auto;
+    padding-top: max(42px, calc(env(safe-area-inset-top) + 34px));
+  }
+
+  .screen--start .screen__title,
+  .screen--results .screen__title {
+    font-size: clamp(28px, 7vh, 36px);
+  }
+
+  .screen--start .screen__lead {
+    max-width: 560px;
+    margin-bottom: 13px;
+    font-size: 13px;
+    line-height: 1.45;
+  }
+
+  .start__fan {
+    margin-bottom: 14px;
+  }
+
+  .start__fan .card--board {
+    width: 54px;
+    height: 76px;
+    border-radius: 6px;
+  }
+
+  .start__fan .card--board .card__corner {
+    top: 5px;
+    left: 5px;
+  }
+
+  .start__fan .card--board .card__rank {
+    font-size: 19px;
+  }
+
+  .start__fan .card--board .card__suit {
+    font-size: 13px;
+  }
+
+  .start__fan .card--board .card__pip {
+    right: 5px;
+    bottom: 4px;
+    font-size: 33px;
+  }
+
+  .start__fan-slot {
+    margin: 0 -10px;
+  }
+
+  .start__rule {
+    width: min(280px, 48%);
+    margin: 8px 0 10px;
+  }
+
+  .screen--start .btn--large,
+  .screen--results .btn--large {
+    width: auto;
+    min-width: 220px;
+    min-height: 46px;
+    padding: 10px 30px;
+    font-size: 15px;
+  }
+
+  .screen--table {
+    height: 100vh;
+    height: 100dvh;
+    min-height: 0;
+    overflow: hidden;
+    padding:
+      max(4px, env(safe-area-inset-top))
+      max(8px, env(safe-area-inset-right))
+      max(5px, env(safe-area-inset-bottom))
+      max(8px, env(safe-area-inset-left));
+    gap: 4px;
+  }
+
+  .topbar {
+    flex-wrap: nowrap;
+    gap: 4px;
+    margin-top: 0;
+    padding: 0 132px 0 2px;
+    font-size: 10px;
+    white-space: nowrap;
+  }
+
+  .topbar__counter {
+    padding: 2px 7px;
+  }
+
+  .topbar__counter strong {
+    font-size: 12px;
+  }
+
+  .topbar__help {
+    min-height: 25px;
+    padding: 2px 8px;
+    font-size: 10px;
+  }
+
+  .topbar__blinds {
+    margin-left: auto;
+    overflow: hidden;
+    font-size: 10px;
+    text-overflow: ellipsis;
+  }
+
+  .langswitch {
+    top: max(4px, env(safe-area-inset-top));
+    right: max(8px, env(safe-area-inset-right));
+  }
+
+  .langswitch__option {
+    min-height: 27px;
+    padding: 3px 10px;
+    font-size: 10px;
+  }
+
+  .layout,
+  .layout--log-collapsed {
+    position: relative;
+    flex: 1;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: minmax(0, 1fr);
+    min-height: 0;
+    overflow: hidden;
+  }
+
+  .felt {
+    position: absolute;
+    inset: 6px 8px;
+    height: auto;
+    min-height: 0;
+    aspect-ratio: auto;
+    margin: 0;
+    border-radius: 45% / 40%;
+  }
+
+  .felt__rail {
+    inset: -6px;
+    border-radius: 45% / 40%;
+  }
+
+  .felt__inlay {
+    inset: 12px 24px;
+  }
+
+  .layout .log {
+    position: absolute;
+    inset: 0 0 0 auto;
+    width: min(280px, calc(100% - 42px));
+    z-index: 10;
+  }
+
+  .layout .log--collapsed {
+    width: 34px;
+    padding: 4px 0;
+  }
+
+  .log__title {
+    padding: 6px 6px 6px 10px;
+  }
+
+  .log__scroll {
+    padding: 6px 10px 8px;
+    font-size: 11px;
+    line-height: 1.55;
+  }
+
+  .controls {
+    flex-direction: row;
+    min-height: 96px;
+    gap: 8px;
+    padding: 5px 7px;
+  }
+
+  .odds {
+    width: clamp(150px, 24vw, 190px);
+    gap: 0;
+    padding: 0 8px 0 0;
+    border-right: 1px solid var(--line-soft);
+    border-bottom: 0;
+  }
+
+  .odds--idle {
+    padding: 0;
+    border-right-color: transparent;
+  }
+
+  .odds__title {
+    font-size: 9px;
+    letter-spacing: 0.12em;
+  }
+
+  .odds__context {
+    overflow: hidden;
+    font-size: 9px;
+    line-height: 1.2;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .odds__list {
+    gap: 0;
+  }
+
+  .odds__row,
+  .odds__row:lang(zh) {
+    grid-template-columns: 68px minmax(0, 1fr) 35px;
+    gap: 4px;
+    font-size: 9px;
+    line-height: 1.15;
+  }
+
+  .odds__row:lang(zh) {
+    grid-template-columns: 34px minmax(0, 1fr) 35px;
+  }
+
+  .odds__bar {
+    height: 4px;
+  }
+
+  .actions {
+    gap: 4px;
+  }
+
+  .actions__row {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 5px;
+  }
+
+  .actions__row--sizing {
+    grid-template-columns: repeat(3, minmax(0, 1fr)) minmax(72px, 1.2fr);
+  }
+
+  .actions__row .btn {
+    min-width: 0;
+    min-height: 40px;
+    padding: 5px 4px;
+    font-size: 11px;
+    line-height: 1.1;
+  }
+
+  .actions__row .btn--preset {
+    font-size: 10px;
+  }
+
+  .slider {
+    grid-column: auto;
+    width: 100%;
+    min-width: 0;
+    height: 24px;
+  }
+
+  .seat {
+    left: var(--seat-left-landscape);
+    top: var(--seat-top-landscape);
+    width: 104px;
+    gap: 2px;
+  }
+
+  .seat:not(.seat--player) .seat__cards {
+    display: none;
+  }
+
+  .seat__chips {
+    display: none;
+  }
+
+  .seat--player {
+    width: 168px;
+    flex-direction: row;
+    gap: 4px;
+  }
+
+  .seat--player .seat__plate {
+    width: 104px;
+  }
+
+  .seat__plate {
+    border-radius: 8px;
+    padding: 3px 5px;
+  }
+
+  .seat__ring {
+    inset: -2px;
+    border-radius: 10px;
+  }
+
+  .seat__identity {
+    gap: 4px;
+  }
+
+  .seat__avatar {
+    width: 18px;
+    height: 18px;
+    font-size: 9px;
+  }
+
+  .seat__name {
+    font-size: 11px;
+  }
+
+  .seat__button {
+    width: 16px;
+    height: 16px;
+    font-size: 9px;
+  }
+
+  .seat__numbers {
+    gap: 3px;
+    margin-top: 2px;
+  }
+
+  .seat__stat {
+    flex-direction: row;
+    align-items: baseline;
+    gap: 2px;
+    padding: 1px 2px;
+  }
+
+  .seat__stat-label {
+    font-size: 7px;
+    letter-spacing: 0.02em;
+  }
+
+  .seat__stack,
+  .seat__score {
+    font-size: 10px;
+  }
+
+  .seat__tag {
+    top: -6px;
+    padding: 1px 6px;
+    font-size: 8px;
+  }
+
+  .seat__bet {
+    gap: 4px;
+    padding: 2px 7px 2px 4px;
+    font-size: 10px;
+  }
+
+  .card--board {
+    width: 36px;
+    height: 50px;
+  }
+
+  .card--hole {
+    width: 28px;
+    height: 39px;
+  }
+
+  .card--mini {
+    width: 27px;
+    height: 38px;
+  }
+
+  .card--board .card__rank {
+    font-size: 14px;
+  }
+
+  .card--board .card__pip {
+    font-size: 23px;
+  }
+
+  .card--mini .card__rank {
+    font-size: 10px;
+  }
+
+  .card--mini .card__pip {
+    font-size: 15px;
+  }
+
+  .middle {
+    top: 50%;
+    gap: 4px;
+  }
+
+  .board,
+  .reveal__board-cards {
+    gap: 4px;
+  }
+
+  .pot {
+    padding: 2px 6px 2px 4px;
+  }
+
+  .pot--empty,
+  .pot--total {
+    padding: 2px 7px;
+    font-size: 9px;
+  }
+
+  .seat[data-visual-index='0'] .seat__bet,
+  .seat[data-visual-index='1'] .seat__bet,
+  .seat[data-visual-index='5'] .seat__bet {
+    top: auto;
+    bottom: calc(100% + 3px);
+  }
+
+  .seat__bet .chip {
+    width: 10px;
+    height: 10px;
+  }
+
+  .overlay {
+    padding:
+      max(5px, env(safe-area-inset-top))
+      max(42px, env(safe-area-inset-right))
+      max(5px, env(safe-area-inset-bottom))
+      max(5px, env(safe-area-inset-left));
+  }
+
+  .overlay--modal {
+    padding:
+      max(5px, env(safe-area-inset-top))
+      max(5px, env(safe-area-inset-right))
+      max(5px, env(safe-area-inset-bottom))
+      max(5px, env(safe-area-inset-left));
+  }
+
+  .reveal,
+  .rankings {
+    max-height: 100%;
+    padding: 8px 10px;
+    gap: 6px;
+  }
+
+  .reveal__head h2 {
+    margin-bottom: 0;
+    font-size: 15px;
+  }
+
+  .reveal__board {
+    gap: 4px;
+    padding: 5px 10px;
+  }
+
+  .reveal__board-label,
+  .reveal__board-note {
+    font-size: 9px;
+  }
+
+  .reveal__pots {
+    gap: 5px;
+  }
+
+  .reveal__pot {
+    padding: 3px 8px;
+    font-size: 10px;
+  }
+
+  .reveal__seats {
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+    gap: 5px;
+  }
+
+  .reveal__seat {
+    padding: 4px 3px;
+  }
+
+  .reveal__seat-name,
+  .reveal__made {
+    font-size: 9px;
+  }
+
+  .reveal__seat-cards {
+    margin: 4px 0 3px;
+  }
+
+  .reveal .btn,
+  .rankings .btn {
+    min-height: 36px;
+    padding: 6px 16px;
+    font-size: 11px;
+  }
+
+  .rankings__head p {
+    margin-top: 4px;
+    font-size: 10px;
+    line-height: 1.35;
+  }
+
+  .rankings__list {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 3px;
+  }
+
+  .rankings__row {
+    grid-template-columns: 16px minmax(0, 1fr);
+    gap: 3px 5px;
+    padding: 3px;
+  }
+
+  .rankings__place,
+  .rankings__name,
+  .rankings__note {
+    font-size: 9px;
+  }
+
+  .rankings__cards {
+    gap: 2px;
+  }
+
+  .rankings__cards .card--mini {
+    width: 20px;
+    height: 28px;
+  }
+}
+
+@media (orientation: landscape) and (max-width: 1000px) and (max-height: 360px) {
+  .controls {
+    min-height: 88px;
+    padding-block: 4px;
+  }
+
+  .actions__row .btn {
+    min-height: 38px;
+  }
+
+  .odds__context,
+  .odds__row,
+  .odds__row:lang(zh) {
+    font-size: 8px;
+  }
+}
+
+/* A normal web page cannot lock orientation consistently, and iOS Safari does
+   not expose orientation locking at all. Blocking the narrow portrait canvas
+   with a rotate notice gives every phone the same predictable entry path. */
+@media (orientation: portrait) and (max-width: 600px) {
+  .rotate-notice {
+    position: fixed;
+    inset: 0;
+    z-index: 25;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    padding:
+      max(32px, env(safe-area-inset-top))
+      max(24px, env(safe-area-inset-right))
+      max(32px, env(safe-area-inset-bottom))
+      max(24px, env(safe-area-inset-left));
+    background:
+      radial-gradient(circle at 50% 42%, rgba(27, 81, 66, 0.5), transparent 42%),
+      rgba(8, 11, 10, 0.97);
+    text-align: center;
+  }
+
+  .rotate-notice__phone {
+    position: relative;
+    width: 48px;
+    height: 76px;
+    margin-bottom: 13px;
+    border: 3px solid var(--gold);
+    border-radius: 10px;
+    box-shadow: 0 0 28px rgba(224, 190, 110, 0.16);
+    animation: rotate-phone 1.8s var(--ease) infinite;
+  }
+
+  .rotate-notice__phone::after {
+    content: '';
+    position: absolute;
+    left: 50%;
+    bottom: 5px;
+    width: 12px;
+    height: 2px;
+    border-radius: 999px;
+    background: var(--gold-deep);
+    transform: translateX(-50%);
+  }
+
+  .rotate-notice__title {
+    color: var(--gold);
+    font-size: 24px;
+    letter-spacing: 0.04em;
+  }
+
+  .rotate-notice__body {
+    max-width: 300px;
+    color: var(--ink-dim);
+    font-size: 15px;
+    line-height: 1.65;
+  }
+}
+
+@keyframes rotate-phone {
+  0%,
+  24% {
+    transform: rotate(0);
+  }
+  56%,
+  100% {
+    transform: rotate(-90deg);
+  }
 }

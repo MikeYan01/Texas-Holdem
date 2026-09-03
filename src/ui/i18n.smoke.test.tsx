@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { renderToStaticMarkup } from 'react-dom/server';
 import type { ReactElement } from 'react';
 import { createSession, reduce } from '../engine/engine.ts';
@@ -30,6 +30,8 @@ const CJK = /[\u4e00-\u9fff]/;
 
 const render = (element: ReactElement, locale: Locale): string =>
   renderToStaticMarkup(<LocaleProvider initial={locale}>{element}</LocaleProvider>);
+
+afterEach(() => vi.unstubAllGlobals());
 
 /**
  * A table stopped on the Player's turn, with a log behind it.
@@ -91,7 +93,9 @@ function finishedSession(): SessionState {
 describe('the interface in both languages', () => {
   it('opens in the language it was given', () => {
     expect(render(<App />, 'zh')).toContain('开始新局');
+    expect(render(<App />, 'zh')).toContain('请横屏游玩');
     expect(render(<App />, 'en')).toContain('New Session');
+    expect(render(<App />, 'en')).toContain('Rotate to play');
     expect(render(<App />, 'en')).toContain('Texas Hold&#x27;em');
   });
 
@@ -127,6 +131,15 @@ describe('the interface in both languages', () => {
     expect(markup).toContain('弃牌');
     expect(markup).toContain('行动记录');
     expect(markup).toContain('第 1 / 18 手');
+  });
+
+  it('starts with the action log collapsed on a compact viewport', () => {
+    vi.stubGlobal('window', {
+      matchMedia: () => ({ matches: true }),
+    });
+    const markup = render(<TableScreen controller={tableController()} />, 'en');
+    expect(markup).toContain('class="layout layout--log-collapsed"');
+    expect(markup).toContain('class="log log--collapsed"');
   });
 
   it('leaves no Chinese in the Reveal panel in English', () => {

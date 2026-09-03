@@ -13,11 +13,20 @@ import { useLocale } from '../locale-context.tsx';
 
 /** How many hand categories to list. Nine is too many to read at a glance. */
 const CATEGORIES_SHOWN = 5;
+const COMPACT_TABLE_MEDIA = '(max-width: 900px), (max-height: 600px)';
+
+function compactLogByDefault(): boolean {
+  return (
+    typeof window !== 'undefined' &&
+    typeof window.matchMedia === 'function' &&
+    window.matchMedia(COMPACT_TABLE_MEDIA).matches
+  );
+}
 
 export function TableScreen({ controller }: { controller: GameController }) {
   const { t } = useLocale();
   const { session, log, nameOf, act, nextHand } = controller;
-  const [logCollapsed, setLogCollapsed] = useState(false);
+  const [logCollapsed, setLogCollapsed] = useState(compactLogByDefault);
   const [rankingsOpen, setRankingsOpen] = useState(false);
   const playersTurn = isPlayerToAct(session);
   const totalOrbits = session.config.handsPerSession / session.config.seatCount;

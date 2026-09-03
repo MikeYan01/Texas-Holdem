@@ -18,6 +18,8 @@ export type SeatBadgeProps = {
   readonly winningCards: readonly Card[];
   /** Where round the felt this Seat sits, as a CSS-ready position. */
   readonly style: React.CSSProperties;
+  /** Clockwise position from the Player, used only to place compact-screen bets inward. */
+  readonly visualIndex: number;
   /**
    * Which side of the plate the chips sit on. Always the inward side: the felt
    * leaves only about 50px between a side Seat and the rail, and several hundred
@@ -36,6 +38,7 @@ export function SeatBadge({
   isWinner,
   winningCards,
   style,
+  visualIndex,
   chipsSide,
 }: SeatBadgeProps) {
   const { locale, t } = useLocale();
@@ -54,7 +57,7 @@ export function SeatBadge({
     .join(' ');
 
   return (
-    <div className={className} style={style}>
+    <div className={className} style={style} data-visual-index={visualIndex}>
       <div className="seat__cards">
         {[0, 1].map((i) => (
           <PlayingCard

@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { LanguageSwitch } from './components/LanguageSwitch.tsx';
+import { RotateDeviceNotice } from './components/RotateDeviceNotice.tsx';
 import { ResultsScreen } from './screens/ResultsScreen.tsx';
 import { StartScreen } from './screens/StartScreen.tsx';
 import { TableScreen } from './screens/TableScreen.tsx';
@@ -47,6 +48,7 @@ export function App() {
   return (
     <>
       {screen}
+      <RotateDeviceNotice />
       <LanguageSwitch />
     </>
   );

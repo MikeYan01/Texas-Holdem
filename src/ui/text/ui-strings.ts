@@ -24,6 +24,11 @@ export type UiStrings = {
     readonly label: string;
   };
 
+  readonly orientation: {
+    readonly title: string;
+    readonly body: string;
+  };
+
   readonly start: {
     readonly lead: (seatCount: number, orbits: number, hands: number) => string;
     readonly begin: string;
@@ -113,6 +118,11 @@ const zh: UiStrings = {
 
   language: {
     label: '语言',
+  },
+
+  orientation: {
+    title: '请横屏游玩',
+    body: '旋转手机后，牌桌会自动铺满屏幕。',
   },
 
   start: {
@@ -215,6 +225,11 @@ const en: UiStrings = {
 
   language: {
     label: 'Language',
+  },
+
+  orientation: {
+    title: 'Rotate to play',
+    body: 'Turn your phone sideways to see the complete table.',
   },
 
   start: {
