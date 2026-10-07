@@ -1,0 +1,230 @@
+import { afterEach, describe, expect, it, vi } from 'vitest';
+import { renderToStaticMarkup } from 'react-dom/server';
+import type { ReactElement } from 'react';
+import { createSession, reduce } from '../engine/engine.ts';
+import { isPlayerToAct } from '../engine/selectors.ts';
+import type { SessionState } from '../engine/types.ts';
+import { seededRng } from '../poker-math/rng.ts';
+import { App } from './App.tsx';
+import { LocaleProvider } from './locale-context.tsx';
+import { assignBotNames } from './bot-names.ts';
+import { seatName, type GameController, type LoggedEvent } from './useGameSession.ts';
+import { TableScreen } from './screens/TableScreen.tsx';
+import { ResultsScreen } from './screens/ResultsScreen.tsx';
+import { RevealPanel } from './components/RevealPanel.tsx';
+import { HandRankingsPanel } from './components/HandRankingsPanel.tsx';
+import { AnimatedOverlay } from './components/AnimatedOverlay.tsx';
+import { LOCALES, type Locale } from './text/locale.ts';
+
+// Does the language switch actually change what is on screen?
+//
+// Nothing else in the suite renders a component, and no type can answer this: a string left hard-coded in a `.tsx` file compiles perfectly and then sits there in Chinese with the interface set to English.
+// So the load-bearing assertion here is the negative one — no CJK anywhere in an English render.
+//
+// This is static markup, not a browser.
+// No effects run, so no Bot ever acts and no timer fires; that is fine, because what is being checked is the words.
+
+const CJK = /[\u4e00-\u9fff]/;
+
+const render = (element: ReactElement, locale: Locale): string =>
+  renderToStaticMarkup(<LocaleProvider initial={locale}>{element}</LocaleProvider>);
+
+afterEach(() => vi.unstubAllGlobals());
+
+/**
+ * A table stopped on the Player's turn, with a log behind it.
+ *
+ * It has to be the Player's turn or the action bar renders its idle state and the buttons — the densest patch of text on the screen — never get looked at.
+ */
+function tableController(): GameController {
+  let session: SessionState = createSession({ seed: 20_260_825 });
+  const log: LoggedEvent[] = [];
+
+  for (let step = 0; step < 500 && !isPlayerToAct(session); step++) {
+    session =
+      session.phase === 'awaiting-action'
+        ? reduce(session, session.legalActions!.canCheck ? { type: 'check' } : { type: 'call' })
+        : reduce(session, { type: 'advance' });
+    for (const event of session.events) log.push({ id: `${log.length}`, event });
+  }
+
+  const names = assignBotNames(session.config.seatCount, session.playerSeat, seededRng(7));
+
+  return {
+    session,
+    log,
+    animations: [],
+    nameOf: (seat) => seatName(seat, session.playerSeat, names, 'en'),
+    act: () => {},
+    nextHand: () => {},
+    restart: () => {},
+  };
+}
+
+/** A settled Hand, so the Reveal panel has pots and winners to describe. */
+function settledSession(): SessionState {
+  let session: SessionState = createSession({ seed: 99 });
+  for (let step = 0; step < 400 && session.phase !== 'hand-complete'; step++) {
+    session =
+      session.phase === 'awaiting-action'
+        ? reduce(session, session.legalActions!.canCheck ? { type: 'check' } : { type: 'call' })
+        : reduce(session, { type: 'advance' });
+  }
+  return session;
+}
+
+/** A finished Session, for the ranking. */
+function finishedSession(): SessionState {
+  let session: SessionState = createSession({ seed: 5 });
+  for (let step = 0; step < 40_000 && session.phase !== 'session-complete'; step++) {
+    session =
+      session.phase === 'awaiting-action'
+        ? reduce(session, session.legalActions!.canCheck ? { type: 'check' } : { type: 'call' })
+        : reduce(session, { type: 'advance' });
+  }
+  return session;
+}
+
+describe('the interface in both languages', () => {
+  it('opens in the language it was given', () => {
+    expect(render(<App />, 'zh')).toContain('开始新局');
+    expect(render(<App />, 'zh')).toContain('请横屏游玩');
+    expect(render(<App />, 'en')).toContain('New Session');
+    expect(render(<App />, 'en')).toContain('Rotate to play');
+    expect(render(<App />, 'en')).toContain('Texas Hold&#x27;em');
+  });
+
+  it('keeps the start screen free of decorative copy and dividers', () => {
+    for (const locale of LOCALES) {
+      const markup = render(<App />, locale);
+      for (const removed of ['start__header', 'start__edition', 'eyebrow', 'start__note', 'start__art-caption', 'start__footer', 'screen__lead']) {
+        expect(markup).not.toContain(removed);
+      }
+    }
+  });
+
+  it('offers both languages, each written in itself', () => {
+    for (const locale of LOCALES) {
+      const markup = render(<App />, locale);
+      expect(markup).toContain('中文');
+      expect(markup).toContain('English');
+    }
+  });
+
+  it('leaves no Chinese on the start screen in English', () => {
+    const markup = render(<App />, 'en');
+    // The switch itself is the one place Chinese belongs: it is the label for the other language.
+    expect(markup.replaceAll('中文', '')).not.toMatch(CJK);
+  });
+
+  it('leaves no Chinese on the table in English', () => {
+    const controller = tableController();
+    expect(isPlayerToAct(controller.session), 'the action bar must be live').toBe(true);
+    const markup = render(<TableScreen controller={controller} />, 'en');
+    expect(markup).not.toMatch(CJK);
+    // Verify that the table actually rendered instead of returning nothing.
+    expect(markup).toContain('Hand 1 / 18');
+    expect(markup).toContain('Orbit 1 / 3');
+    expect(markup).not.toContain('topbar__hint');
+    expect(markup).not.toContain('6 Hands per Orbit');
+    expect(markup).toContain('Fold');
+    expect(markup).toContain('Action log');
+    expect(markup).toContain('Your move');
+    expect(markup).toContain('Take your time');
+    expect(markup).toContain('Preflop');
+    expect(markup).toContain(`value="${controller.session.legalActions!.minRaiseTo}"`);
+  });
+
+  it('renders the same table in Chinese', () => {
+    const markup = render(<TableScreen controller={tableController()} />, 'zh');
+    expect(markup).toContain('弃牌');
+    expect(markup).toContain('行动记录');
+    expect(markup).toContain('第 1 / 18 手');
+    expect(markup).not.toContain('topbar__hint');
+    expect(markup).not.toContain('每圈 6 手');
+  });
+
+  it('starts with the action log collapsed on a compact viewport', () => {
+    vi.stubGlobal('window', {
+      matchMedia: () => ({ matches: true }),
+    });
+    const markup = render(<TableScreen controller={tableController()} />, 'en');
+    expect(markup).toContain('class="layout layout--log-collapsed"');
+    expect(markup).toContain('class="log log--collapsed"');
+  });
+
+  it('leaves no Chinese in the Reveal panel in English', () => {
+    const session = settledSession();
+    expect(session.phase).toBe('hand-complete');
+    const panel = <RevealPanel session={session} nameOf={(s) => `Seat${s}`} onNext={() => {}} />;
+    const markup = render(panel, 'en');
+    expect(markup).not.toMatch(CJK);
+    expect(markup).toContain('Reveal');
+    expect(markup).toContain('Board');
+    expect(markup).toContain('Next Hand');
+    // The pot summary is the part that reaches back into the engine's events.
+    expect(markup).toContain('Main pot');
+    expect(render(panel, 'zh')).toContain('主池');
+  });
+
+  it('leaves no Chinese in the hand-rankings panel in English', () => {
+    const panel = <HandRankingsPanel onClose={() => {}} />;
+    const markup = render(panel, 'en');
+    expect(markup).not.toMatch(CJK);
+    expect(markup).toContain('Hand rankings');
+    // All nine categories, each with its five example cards.
+    expect(markup).toContain('Straight flush');
+    expect(markup).toContain('High card');
+    expect(markup.match(/class="card /g) ?? []).toHaveLength(9 * 5);
+    expect(render(panel, 'zh')).toContain('牌型大小');
+    expect(render(panel, 'zh')).toContain('皇家同花顺');
+  });
+
+  it('leaves no Chinese on the results screen in English', () => {
+    const session = finishedSession();
+    expect(session.phase).toBe('session-complete');
+    const screen = (
+      <ResultsScreen session={session} nameOf={(s) => `Seat${s}`} onRestart={() => {}} />
+    );
+    expect(render(screen, 'en')).not.toMatch(CJK);
+    expect(render(screen, 'en')).toContain('Session over');
+    expect(render(screen, 'en')).toContain('Play again');
+    expect(render(screen, 'zh')).toContain('本局结束');
+    expect(render(screen, 'en')).toContain('Your Score');
+    expect(render(screen, 'en')).toContain('Your place');
+    expect(render(screen, 'zh')).toContain('你的净胜负');
+  });
+
+  it('mounts overlay content only when opened', () => {
+    expect(render(<AnimatedOverlay open={false}><span>content</span></AnimatedOverlay>, 'en')).toBe('');
+    const markup = render(<AnimatedOverlay open modal><span>content</span></AnimatedOverlay>, 'en');
+    expect(markup).toContain('overlay--modal');
+    expect(markup).toContain('content');
+    expect(markup).not.toContain('inert');
+  });
+
+  it('formats a Score the same way on the felt and in the ranking', () => {
+    const controller = tableController();
+    const session: SessionState = {
+      ...controller.session,
+      seats: controller.session.seats.map((seat) => ({
+        ...seat,
+        boughtIn: 2000,
+        stack: 2000 + (seat.index === 0 ? 1240 : seat.index === 1 ? -1240 : 0),
+      })),
+    };
+    for (const locale of LOCALES) {
+      const ranking = render(
+        <ResultsScreen session={session} nameOf={(s) => `Seat${s}`} onRestart={() => {}} />,
+        locale,
+      );
+      const table = render(<TableScreen controller={{ ...controller, session }} />, locale);
+      const tableScores = [...table.matchAll(/class="seat__score[^"]*">([^<]*)</g)]
+        .map((match) => match[1]);
+      const rankingScores = [...ranking.matchAll(/class="ranking__score[^"]*">([^<]*)</g)]
+        .map((match) => match[1]);
+      expect(tableScores, locale).toEqual(['+1,240', '-1,240', '0', '0', '0', '0']);
+      expect(rankingScores, locale).toEqual(['+1,240', '0', '0', '0', '0', '-1,240']);
+    }
+  });
+});

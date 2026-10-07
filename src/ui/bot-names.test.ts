@@ -1,0 +1,49 @@
+import { describe, expect, it } from 'vitest';
+import { seededRng } from '../poker-math/rng.ts';
+import { PERSONALITY_KEYS } from '../bots/personalities.ts';
+import { assignBotNames, BOT_NAMES, playerName, unnamedSeatName } from './bot-names.ts';
+import { LOCALES } from './text/locale.ts';
+
+describe('assignBotNames', () => {
+  it('gives every Bot Seat a distinct name and leaves the Player alone', () => {
+    for (let playerSeat = 0; playerSeat < 6; playerSeat++) {
+      const names = assignBotNames(6, playerSeat, seededRng(playerSeat));
+      expect(names.size).toBe(5);
+      expect(names.has(playerSeat)).toBe(false);
+      expect(new Set(names.values()).size).toBe(5);
+      for (const name of names.values()) expect(BOT_NAMES).toContain(name);
+    }
+  });
+
+  it('has one name per personality, so the table is never short of either', () => {
+    expect(BOT_NAMES).toHaveLength(PERSONALITY_KEYS.length);
+  });
+
+  it('replays from a seed', () => {
+    expect([...assignBotNames(6, 2, seededRng(9))]).toEqual([...assignBotNames(6, 2, seededRng(9))]);
+  });
+
+  it('reshuffles between Sessions', () => {
+    const layouts = new Set(
+      Array.from({ length: 40 }, (_, seed) =>
+        [...assignBotNames(6, 0, seededRng(seed))].map(([, name]) => name).join(','),
+      ),
+    );
+    expect(layouts.size).toBeGreaterThan(1);
+  });
+
+  it('fits on a Seat plate', () => {
+    for (const name of BOT_NAMES) expect(name.length).toBeLessThanOrEqual(9);
+  });
+
+  it('leaves the Bot names untranslated, and the Player name translated', () => {
+    // Real surnames are not translated, in either direction.
+    for (const locale of LOCALES) {
+      for (const name of BOT_NAMES) expect(name).not.toMatch(/[\u4e00-\u9fff]/);
+      expect(playerName(locale)).toBeTruthy();
+      expect(unnamedSeatName(2, locale)).toBeTruthy();
+    }
+    expect(playerName('zh')).not.toBe(playerName('en'));
+    expect(unnamedSeatName(2, 'en')).not.toMatch(/[\u4e00-\u9fff]/);
+  });
+});
